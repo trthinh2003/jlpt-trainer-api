@@ -1,0 +1,45 @@
+﻿using JlptTrainer.Application.Common.Interfaces;
+using JlptTrainer.Infrastructure.Auth;
+using JlptTrainer.Infrastructure.Persistence;
+using JlptTrainer.Infrastructure.Services;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace JlptTrainer.Infrastructure;
+
+public static class DependencyInjection
+{
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString("DefaultConnection")
+            ?? throw new InvalidOperationException(
+                "Thiếu connection string 'DefaultConnection' trong appsettings.json");
+
+        services.AddDbContext<ApplicationDbContext>(options =>
+            options
+                .UseNpgsql(connectionString, npgsqlOptions =>
+                    npgsqlOptions.MigrationsAssembly(
+                        typeof(ApplicationDbContext).Assembly.FullName))
+                .UseSnakeCaseNamingConvention());
+
+        services.AddScoped<IApplicationDbContext>(
+            provider => provider.GetRequiredService<ApplicationDbContext>());
+
+        // Dùng chung 1 connection string cho cả EF Core (write) và Dapper (read nặng)
+        services.AddSingleton<IDapperContext>(_ => new DapperContext(connectionString));
+
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
+
+        services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+        services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
+        services.AddScoped<ITokenGenerator, JwtTokenGenerator>();
+
+        services.AddSingleton(TimeProvider.System);
+
+        return services;
+    }
+}

@@ -1,0 +1,66 @@
+## ===== Build artifacts =====
+bin/
+obj/
+out/
+publish/
+
+## ===== Visual Studio =====
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## ===== Rider / JetBrains =====
+.idea/
+*.sln.iml
+
+## ===== VS Code =====
+.vscode/
+!.vscode/extensions.json
+
+## ===== appsettings chứa secret thật - KHÔNG commit =====
+# appsettings.json (không chứa secret thật, chỉ placeholder) vẫn được commit bình thường
+# nhưng mọi file appsettings.*.json khác (Development, Local, Staging...) có khả năng
+# chứa connection string/JWT secret thật nên loại trừ hết, trừ appsettings.json gốc.
+appsettings.Development.json
+appsettings.Local.json
+appsettings.Staging.json
+appsettings.Production.json
+*.local.json
+
+## ===== User secrets (dotnet user-secrets) =====
+secrets.json
+
+## ===== EF Core =====
+
+## ===== Logs =====
+*.log
+logs/
+
+## ===== OS =====
+.DS_Store
+Thumbs.db
+
+## ===== Test results =====
+TestResults/
+*.trx
+coverage/
+*.coverage
+*.coveragexml
+
+## ===== NuGet =====
+*.nupkg
+*.snupkg
+packages/
+!packages/repositories.config
+
+## ===== Node/Angular =====
+node_modules/
+dist/
+.angular/
+
+## ===== Misc =====
+*.pdb
+*.cache
+launchSettings.json.bak

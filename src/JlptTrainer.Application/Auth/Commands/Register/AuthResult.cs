@@ -5,5 +5,4 @@
         string Email,
         string DisplayName,
         string Token);
-
 }

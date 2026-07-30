@@ -1,22 +1,23 @@
 ﻿using JlptTrainer.Application.Common.Interfaces;
 using JlptTrainer.Infrastructure.Auth;
+using JlptTrainer.Infrastructure.ExcelImport;
 using JlptTrainer.Infrastructure.Persistence;
 using JlptTrainer.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OfficeOpenXml;
 
 namespace JlptTrainer.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(
-        this IServiceCollection services,
-        IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
         var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException(
-                "Thiếu connection string 'DefaultConnection' trong appsettings.json");
+            ?? throw new InvalidOperationException("Thiếu connection string 'DefaultConnection' trong appsettings.json");
 
         services.AddDbContext<ApplicationDbContext>(options =>
             options
@@ -28,7 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IApplicationDbContext>(
             provider => provider.GetRequiredService<ApplicationDbContext>());
 
-        // Dùng chung 1 connection string cho cả EF Core (write) và Dapper (read nặng)
+        // dùng chung 1 connection string cho cả EF Core (write) và Dapper (read nặng)
         services.AddSingleton<IDapperContext>(_ => new DapperContext(connectionString));
 
         services.AddHttpContextAccessor();
@@ -37,6 +38,8 @@ public static class DependencyInjection
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
         services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
         services.AddScoped<ITokenGenerator, JwtTokenGenerator>();
+
+        services.AddScoped<IExcelReader, EPPlusExcelReader>();
 
         services.AddSingleton(TimeProvider.System);
 

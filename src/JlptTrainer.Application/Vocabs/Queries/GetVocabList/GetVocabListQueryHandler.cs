@@ -1,5 +1,4 @@
 ﻿using JlptTrainer.Application.Common.Interfaces;
-using JlptTrainer.Application.Vocabs.Commands.GetVocabList;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 

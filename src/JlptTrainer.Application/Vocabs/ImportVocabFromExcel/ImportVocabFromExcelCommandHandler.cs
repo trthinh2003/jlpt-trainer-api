@@ -13,7 +13,7 @@ namespace JlptTrainer.Application.Vocabs.ImportVocabFromExcel
             using var stream = new MemoryStream(request.FileContent);
             var rows = excelReader.ReadSheet(stream);
 
-            var existingKeys = await dbContext.Vocabs // lấy trước danh sách (Word, Reading) đã tồn tại trong DB để so khớp, tránh query DB lặp lại cho từng dòng (N+1) khi file có hàng trăm dòng.
+            var existingKeys = await dbContext.Vocabs 
                 .Select(v => new { v.Word, v.Reading })
                 .ToListAsync(cancellationToken);
 

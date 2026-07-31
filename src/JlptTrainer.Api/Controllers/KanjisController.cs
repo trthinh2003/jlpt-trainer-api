@@ -1,6 +1,8 @@
 ﻿using JlptTrainer.Application.Kanjis.Commands.CreateKanji;
 using JlptTrainer.Application.Kanjis.Commands.DeleteKanji;
+using JlptTrainer.Application.Kanjis.Commands.ImportKanjiFromExcel;
 using JlptTrainer.Application.Kanjis.Queries.GetKanjiById;
+using JlptTrainer.Application.Kanjis.Queries.GetKanjiImportTemplate;
 using JlptTrainer.Application.Kanjis.Queries.GetKanjiList;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -39,6 +41,35 @@ namespace JlptTrainer.Api.Controllers
         {
             await mediator.Send(new DeleteKanjiCommand(id), cancellationToken);
             return NoContent();
+        }
+
+        [HttpGet("import/template")]
+        public async Task<IActionResult> DownloadImportTemplate(CancellationToken cancellationToken)
+        {
+            var bytes = await mediator.Send(new GetKanjiImportTemplateQuery(), cancellationToken);
+            return File(
+                bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "kanji_import_template.xlsx");
+        }
+
+        [HttpPost("import")]
+        [RequestSizeLimit(5 * 1024 * 1024)]
+        public async Task<ActionResult<ImportKanjiResult>> Import(IFormFile file,CancellationToken cancellationToken)
+        {
+            if (file.Length == 0)
+            {
+                return BadRequest("File không được để trống.");
+            }
+
+            using var memoryStream = new MemoryStream();
+            await file.CopyToAsync(memoryStream, cancellationToken);
+
+            var result = await mediator.Send(
+                new ImportKanjiFromExcelCommand(memoryStream.ToArray()),
+                cancellationToken);
+
+            return Ok(result);
         }
     }
 }

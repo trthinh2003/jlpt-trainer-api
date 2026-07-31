@@ -29,7 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IApplicationDbContext>(
             provider => provider.GetRequiredService<ApplicationDbContext>());
 
-        // dùng chung 1 connection string cho cả EF Core (write) và Dapper (read nặng)
+        // Dùng chung 1 connection string cho cả EF Core (write) và Dapper (read nặng)
         services.AddSingleton<IDapperContext>(_ => new DapperContext(connectionString));
 
         services.AddHttpContextAccessor();
@@ -40,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<ITokenGenerator, JwtTokenGenerator>();
 
         services.AddScoped<IExcelReader, EPPlusExcelReader>();
+        services.AddScoped<IExcelTemplateGenerator, EPPlusExcelTemplateGenerator>();
 
         services.AddSingleton(TimeProvider.System);
 

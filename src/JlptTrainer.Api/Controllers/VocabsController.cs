@@ -2,6 +2,7 @@
 using JlptTrainer.Application.Vocabs.Commands.DeleteVocab;
 using JlptTrainer.Application.Vocabs.ImportVocabFromExcel;
 using JlptTrainer.Application.Vocabs.Queries.GetVocabById;
+using JlptTrainer.Application.Vocabs.Queries.GetVocabImportTemplate;
 using JlptTrainer.Application.Vocabs.Queries.GetVocabList;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -29,7 +30,9 @@ namespace JlptTrainer.Api.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<Guid>> Create(CreateVocabCommand command, CancellationToken cancellationToken)
+        public async Task<ActionResult<Guid>> Create(
+            CreateVocabCommand command,
+            CancellationToken cancellationToken)
         {
             var id = await mediator.Send(command, cancellationToken);
             return CreatedAtAction(nameof(GetById), new { id }, id);
@@ -42,10 +45,24 @@ namespace JlptTrainer.Api.Controllers
             return NoContent();
         }
 
-        // import hàng loạt Vocab từ file Excel. Format cột kỳ vọng (dòng đầu là header):
+        // tải file Excel mẫu để điền dữ liệu trước khi import
+        [HttpGet("import/template")]
+        public async Task<IActionResult> DownloadImportTemplate(CancellationToken cancellationToken)
+        {
+            var bytes = await mediator.Send(new GetVocabImportTemplateQuery(), cancellationToken);
+
+            return File(
+                bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "vocab_import_template.xlsx");
+        }
+
+        // import hàng loạt Vocab từ file Excelormat (dòng đầu là header)
         [HttpPost("import")]
-        [RequestSizeLimit(5 * 1024 * 1024)] 
-        public async Task<ActionResult<ImportVocabResult>> Import(IFormFile file, CancellationToken cancellationToken)
+        [RequestSizeLimit(5 * 1024 * 1024)] // khớp với giới hạn 5MB đã validate ở Command
+        public async Task<ActionResult<ImportVocabResult>> Import(
+            IFormFile file,
+            CancellationToken cancellationToken)
         {
             if (file.Length == 0)
             {
@@ -55,7 +72,9 @@ namespace JlptTrainer.Api.Controllers
             using var memoryStream = new MemoryStream();
             await file.CopyToAsync(memoryStream, cancellationToken);
 
-            var result = await mediator.Send(new ImportVocabFromExcelCommand(memoryStream.ToArray()), cancellationToken);
+            var result = await mediator.Send(
+                new ImportVocabFromExcelCommand(memoryStream.ToArray()),
+                cancellationToken);
 
             return Ok(result);
         }

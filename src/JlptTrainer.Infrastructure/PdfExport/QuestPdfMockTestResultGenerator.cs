@@ -1,6 +1,7 @@
 ﻿using JlptTrainer.Application.Common.Interfaces;
+using QuestPDF.Fluent;
 using QuestPDF.Helpers;
-using System.Reflection.Metadata;
+using QuestPDF.Infrastructure;
 
 namespace JlptTrainer.Infrastructure.PdfExport
 {

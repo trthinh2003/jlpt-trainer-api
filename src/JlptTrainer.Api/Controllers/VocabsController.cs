@@ -4,6 +4,7 @@ using JlptTrainer.Application.Vocabs.ImportVocabFromExcel;
 using JlptTrainer.Application.Vocabs.Queries.GetVocabById;
 using JlptTrainer.Application.Vocabs.Queries.GetVocabImportTemplate;
 using JlptTrainer.Application.Vocabs.Queries.GetVocabList;
+using JlptTrainer.Application.Vocabs.Queries.LookupWord;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -29,10 +30,16 @@ namespace JlptTrainer.Api.Controllers
             return Ok(result);
         }
 
+        /// tra từ qua Jisho API - gợi ý cách đọc/nghĩa (tiếng Anh) trước khi tạo Vocab thật.
+        [HttpGet("lookup")]
+        public async Task<ActionResult<List<LookupWordResultDto>>> Lookup([FromQuery] string keyword, CancellationToken cancellationToken)
+        {
+            var result = await mediator.Send(new LookupWordQuery(keyword), cancellationToken);
+            return Ok(result);
+        }
+
         [HttpPost]
-        public async Task<ActionResult<Guid>> Create(
-            CreateVocabCommand command,
-            CancellationToken cancellationToken)
+        public async Task<ActionResult<Guid>> Create(CreateVocabCommand command, CancellationToken cancellationToken)
         {
             var id = await mediator.Send(command, cancellationToken);
             return CreatedAtAction(nameof(GetById), new { id }, id);
@@ -60,9 +67,7 @@ namespace JlptTrainer.Api.Controllers
         // import hàng loạt Vocab từ file Excelormat (dòng đầu là header)
         [HttpPost("import")]
         [RequestSizeLimit(5 * 1024 * 1024)] // khớp với giới hạn 5MB đã validate ở Command
-        public async Task<ActionResult<ImportVocabResult>> Import(
-            IFormFile file,
-            CancellationToken cancellationToken)
+        public async Task<ActionResult<ImportVocabResult>> Import(IFormFile file, CancellationToken cancellationToken)
         {
             if (file.Length == 0)
             {

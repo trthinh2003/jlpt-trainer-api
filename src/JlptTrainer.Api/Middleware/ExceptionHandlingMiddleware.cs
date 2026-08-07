@@ -22,7 +22,9 @@ namespace JlptTrainer.Api.Middleware
         {
             var (statusCode, message) = exception switch
             {
-                ValidationException validationEx => (HttpStatusCode.BadRequest, string.Join("; ", validationEx.Errors.Select(e => e.ErrorMessage))),
+                ValidationException validationEx => (
+                    HttpStatusCode.BadRequest,
+                    string.Join("; ", validationEx.Errors.Select(e => e.ErrorMessage))),
 
                 NotFoundException => (HttpStatusCode.NotFound, exception.Message),
 
@@ -31,6 +33,8 @@ namespace JlptTrainer.Api.Middleware
                 InvalidCredentialsException => (HttpStatusCode.Unauthorized, exception.Message),
 
                 InsufficientDataException => (HttpStatusCode.UnprocessableEntity, exception.Message),
+
+                ExternalServiceException => (HttpStatusCode.BadGateway, exception.Message),
 
                 ForbiddenAccessException => (HttpStatusCode.Forbidden, exception.Message),
 

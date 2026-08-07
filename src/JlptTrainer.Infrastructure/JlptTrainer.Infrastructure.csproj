@@ -18,6 +18,7 @@
 		</PackageReference>
 		<PackageReference Include="Npgsql" />
 		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+		<PackageReference Include="QuestPDF" />
 		<PackageReference Include="System.IdentityModel.Tokens.Jwt" />
 	</ItemGroup>
 	<PropertyGroup>

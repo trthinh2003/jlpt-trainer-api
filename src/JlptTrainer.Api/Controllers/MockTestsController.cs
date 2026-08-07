@@ -1,6 +1,7 @@
 ﻿using JlptTrainer.Application.MockTests.Commands.SubmitMockTest;
 using JlptTrainer.Application.MockTests.Queries.GetMockTestHistory;
 using JlptTrainer.Application.MockTests.Queries.GetMockTestQuestions;
+using JlptTrainer.Application.MockTests.Queries.GetMockTestResultPdf;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -33,6 +34,14 @@ namespace JlptTrainer.Api.Controllers
         {
             var result = await mediator.Send(query, cancellationToken);
             return Ok(result);
+        }
+
+        // xuất PDF kết quả 1 bài thi đã làm
+        [HttpGet("{id:guid}/pdf")]
+        public async Task<IActionResult> GetResultPdf(Guid id, CancellationToken cancellationToken)
+        {
+            var bytes = await mediator.Send(new GetMockTestResultPdfQuery(id), cancellationToken);
+            return File(bytes, "application/pdf", $"mocktest_result_{id}.pdf");
         }
     }
 }

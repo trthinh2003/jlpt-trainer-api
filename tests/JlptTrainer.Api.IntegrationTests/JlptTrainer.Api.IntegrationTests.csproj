@@ -7,6 +7,7 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="coverlet.collector" />
+		<PackageReference Include="FluentAssertions" />
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" />
 		<PackageReference Include="Testcontainers.PostgreSql" />
@@ -18,5 +19,6 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\JlptTrainer.Api\JlptTrainer.Api.csproj" />
+		<ProjectReference Include="..\..\src\JlptTrainer.Application\JlptTrainer.Application.csproj" />
 	</ItemGroup>
 </Project>

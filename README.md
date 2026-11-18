@@ -2,9 +2,6 @@
 
 API học tiếng Nhật theo cấp N5–N1. Repo gồm kho từ vựng, kanji và ngữ pháp, ôn tập theo lịch SRS, bài luyện từ vựng, xuất PDF và dashboard tiến độ.
 
-- [Kiến trúc và luồng nghiệp vụ](docs/business-flows.md)
-- [Review kỹ thuật và hướng phát triển](docs/technical-review.md)
-
 ## Chạy local
 
 Cần .NET SDK 9, PostgreSQL và công cụ `dotnet-ef` 9.x. Tạo database phát triển riêng. Trong PowerShell, từ thư mục gốc repo, thay các giá trị mẫu bằng cấu hình local của bạn.

@@ -19,6 +19,10 @@ publish/
 .vscode/
 !.vscode/extensions.json
 
+## ===== Local agent instructions =====
+AGENTS.md
+AGENTS.override.md
+
 ## ===== appsettings =====
 appsettings.Development.json
 appsettings.Local.json

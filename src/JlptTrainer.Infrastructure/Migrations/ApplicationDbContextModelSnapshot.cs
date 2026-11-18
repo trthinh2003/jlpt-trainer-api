@@ -119,7 +119,10 @@ namespace JlptTrainer.Infrastructure.Migrations
                     b.HasIndex("Level")
                         .HasDatabaseName("ix_kanjis_level");
 
-                    b.ToTable("kanjis", (string)null);
+                    b.ToTable("kanjis", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_kanjis_positive_stroke_count", "stroke_count > 0");
+                        });
                 });
 
             modelBuilder.Entity("JlptTrainer.Domain.Entities.MockTest", b =>
@@ -163,7 +166,10 @@ namespace JlptTrainer.Infrastructure.Migrations
                     b.HasIndex("UserId", "TakenAt")
                         .HasDatabaseName("ix_mock_tests_user_id_taken_at");
 
-                    b.ToTable("mock_tests", (string)null);
+                    b.ToTable("mock_tests", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_mock_tests_valid_answer_counts", "correct_answers >= 0 AND correct_answers <= total_questions");
+                        });
                 });
 
             modelBuilder.Entity("JlptTrainer.Domain.Entities.ReviewCard", b =>
@@ -182,7 +188,6 @@ namespace JlptTrainer.Infrastructure.Migrations
                         .HasColumnName("created_at");
 
                     b.Property<double>("EaseFactor")
-                        .HasPrecision(4, 2)
                         .HasColumnType("double precision")
                         .HasColumnName("ease_factor");
 
@@ -220,7 +225,12 @@ namespace JlptTrainer.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_review_cards_user_id_card_type_reference_id");
 
-                    b.ToTable("review_cards", (string)null);
+                    b.ToTable("review_cards", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_review_cards_nonnegative_interval", "interval_days >= 0");
+
+                            t.HasCheckConstraint("ck_review_cards_nonnegative_repetitions", "repetitions >= 0");
+                        });
                 });
 
             modelBuilder.Entity("JlptTrainer.Domain.Entities.StudySession", b =>
@@ -260,7 +270,12 @@ namespace JlptTrainer.Infrastructure.Migrations
                     b.HasIndex("UserId", "StartedAt")
                         .HasDatabaseName("ix_study_sessions_user_id_started_at");
 
-                    b.ToTable("study_sessions", (string)null);
+                    b.ToTable("study_sessions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_study_sessions_valid_end_time", "ended_at IS NULL OR ended_at >= started_at");
+
+                            t.HasCheckConstraint("ck_study_sessions_valid_review_counts", "correct_count >= 0 AND correct_count <= cards_reviewed");
+                        });
                 });
 
             modelBuilder.Entity("JlptTrainer.Domain.Entities.User", b =>
@@ -273,6 +288,11 @@ namespace JlptTrainer.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<int>("CredentialVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("credential_version");
 
                     b.Property<string>("DisplayName")
                         .IsRequired()
@@ -291,12 +311,26 @@ namespace JlptTrainer.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("password_hash");
 
+                    b.Property<DateTimeOffset?>("PasswordResetExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("password_reset_expires_at");
+
+                    b.Property<string>("PasswordResetTokenHash")
+                        .IsConcurrencyToken()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("password_reset_token_hash");
+
                     b.HasKey("Id")
                         .HasName("pk_users");
 
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasDatabaseName("ix_users_email");
+
+                    b.HasIndex("PasswordResetTokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_users_password_reset_token_hash");
 
                     b.ToTable("users", (string)null);
                 });
@@ -349,6 +383,36 @@ namespace JlptTrainer.Infrastructure.Migrations
                         .HasDatabaseName("ix_vocabs_level");
 
                     b.ToTable("vocabs", (string)null);
+                });
+
+            modelBuilder.Entity("JlptTrainer.Domain.Entities.MockTest", b =>
+                {
+                    b.HasOne("JlptTrainer.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_mock_tests_users_user_id");
+                });
+
+            modelBuilder.Entity("JlptTrainer.Domain.Entities.ReviewCard", b =>
+                {
+                    b.HasOne("JlptTrainer.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_review_cards_users_user_id");
+                });
+
+            modelBuilder.Entity("JlptTrainer.Domain.Entities.StudySession", b =>
+                {
+                    b.HasOne("JlptTrainer.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_study_sessions_users_user_id");
                 });
 #pragma warning restore 612, 618
         }

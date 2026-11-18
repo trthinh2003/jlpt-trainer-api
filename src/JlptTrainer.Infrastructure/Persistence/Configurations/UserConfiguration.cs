@@ -10,8 +10,11 @@ namespace JlptTrainer.Infrastructure.Persistence.Configurations
         {
             builder.Property(u => u.Email).HasMaxLength(255).IsRequired();
             builder.Property(u => u.DisplayName).HasMaxLength(100).IsRequired();
+            builder.Property(u => u.CredentialVersion).IsConcurrencyToken();
+            builder.Property(u => u.PasswordResetTokenHash).HasMaxLength(64).IsConcurrencyToken();
 
             builder.HasIndex(u => u.Email).IsUnique();
+            builder.HasIndex(u => u.PasswordResetTokenHash).IsUnique();
         }
     }
 }

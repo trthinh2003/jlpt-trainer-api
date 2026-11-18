@@ -2,6 +2,7 @@
 using JlptTrainer.Application.Common.Exceptions;
 using JlptTrainer.Application.Common.Interfaces;
 using JlptTrainer.Application.ReviewCards.Commands.AddToReview;
+using JlptTrainer.Application.ReviewCards.Commands.SubmitReview;
 using JlptTrainer.Domain.Entities;
 using JlptTrainer.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -62,12 +63,8 @@ namespace JlptTrainer.Application.UnitTests.ReviewCards
         {
             var vocab = new Vocab { Word = "読む", Reading = "よむ", Meaning = "đọc" };
             _dbContext.Vocabs.Add(vocab);
-            _dbContext.ReviewCards.Add(new ReviewCard
-            {
-                UserId = _userId,
-                CardType = CardType.Vocab,
-                ReferenceId = vocab.Id
-            });
+            var initialState = SrsCalculator.InitialState(_timeProvider.GetUtcNow());
+            _dbContext.ReviewCards.Add(new ReviewCard(_userId, CardType.Vocab, vocab.Id, initialState));
             await _dbContext.SaveChangesAsync();
 
             var handler = new AddToReviewCommandHandler(_dbContext, _currentUser, _timeProvider);

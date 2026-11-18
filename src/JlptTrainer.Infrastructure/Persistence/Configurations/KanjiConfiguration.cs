@@ -8,6 +8,8 @@ namespace JlptTrainer.Infrastructure.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<Kanji> builder)
         {
+            builder.ToTable(table => table.HasCheckConstraint("ck_kanjis_positive_stroke_count", "stroke_count > 0"));
+
             builder.Property(k => k.Character).HasMaxLength(10).IsRequired();
             builder.Property(k => k.OnYomi).HasMaxLength(200);
             builder.Property(k => k.KunYomi).HasMaxLength(200);

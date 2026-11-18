@@ -43,16 +43,7 @@ namespace JlptTrainer.Application.ReviewCards.Commands.AddToReview
             var now = timeProvider.GetUtcNow();
             var initialState = SrsCalculator.InitialState(now);
 
-            var card = new ReviewCard
-            {
-                UserId = userId,
-                CardType = request.CardType,
-                ReferenceId = request.ReferenceId,
-                EaseFactor = initialState.EaseFactor,
-                IntervalDays = initialState.IntervalDays,
-                Repetitions = initialState.Repetitions,
-                NextReviewDate = initialState.NextReviewDate
-            };
+            var card = new ReviewCard(userId, request.CardType, request.ReferenceId, initialState);
 
             dbContext.ReviewCards.Add(card);
             await dbContext.SaveChangesAsync(cancellationToken);

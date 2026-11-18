@@ -40,9 +40,25 @@ public static class DependencyInjection
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
 
-        services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+        services.AddOptions<JwtSettings>()
+            .BindConfiguration(JwtSettings.SectionName)
+            .Validate(settings => !string.IsNullOrWhiteSpace(settings.Issuer)
+                && !string.IsNullOrWhiteSpace(settings.Audience)
+                && !string.IsNullOrWhiteSpace(settings.Secret)
+                && System.Text.Encoding.UTF8.GetByteCount(settings.Secret) >= 32
+                && settings.ExpiryMinutes > 0, "Cấu hình Jwt không hợp lệ.")
+            .ValidateOnStart();
         services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
         services.AddScoped<ITokenGenerator, JwtTokenGenerator>();
+
+        services.AddOptions<PasswordResetSettings>()
+            .BindConfiguration(PasswordResetSettings.SectionName)
+            .Validate(settings => settings.IsValid(), "Cấu hình PasswordReset không hợp lệ.")
+            .ValidateOnStart();
+        services.AddScoped<IPasswordResetEmailSender, GmailPasswordResetEmailSender>();
+        services.AddSingleton<PasswordResetRequestQueue>();
+        services.AddSingleton<IPasswordResetRequestQueue>(provider => provider.GetRequiredService<PasswordResetRequestQueue>());
+        services.AddHostedService(provider => provider.GetRequiredService<PasswordResetRequestQueue>());
 
         services.AddScoped<IExcelReader, EPPlusExcelReader>();
         services.AddScoped<IExcelTemplateGenerator, EPPlusExcelTemplateGenerator>();

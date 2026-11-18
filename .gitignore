@@ -19,15 +19,6 @@ publish/
 .vscode/
 !.vscode/extensions.json
 
-## ===== Local agent instructions =====
-AGENTS.md
-AGENTS.override.md
-
-## ===== Local project notes =====
-/docs/business-flows.md
-/docs/technical-review.md
-/docs/work-log-*.md
-
 ## ===== appsettings =====
 appsettings.Development.json
 appsettings.Local.json

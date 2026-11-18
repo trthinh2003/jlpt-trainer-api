@@ -1,10 +1,14 @@
 # JLPT Trainer Backend
 
-API học tiếng Nhật theo cấp N5–N1. Repo gồm kho từ vựng, kanji và ngữ pháp, ôn tập theo lịch SRS, bài luyện từ vựng, xuất PDF và dashboard tiến độ.
+**English** | [日本語](README.ja.md) | [Tiếng Việt](README.vi.md)
 
-## Chạy local
+An ASP.NET Core API for studying Japanese at JLPT levels N5–N1. It provides vocabulary, kanji, and grammar catalogs, spaced-repetition review, vocabulary quizzes, PDF exports, and a progress dashboard.
 
-Cần .NET SDK 9, PostgreSQL và công cụ `dotnet-ef` 9.x. Tạo database phát triển riêng. Trong PowerShell, từ thư mục gốc repo, thay các giá trị mẫu bằng cấu hình local của bạn.
+The learner interface lives in the companion [Vue frontend](https://github.com/trthinh2003/jlpt-trainer-fe-vue/blob/master/README.md).
+
+## Run locally
+
+Install the .NET 9 SDK, PostgreSQL, and `dotnet-ef` 9.x. Create a development database. From the repository root in PowerShell, replace the example settings with your local values.
 
 ```powershell
 $env:ConnectionStrings__DefaultConnection = 'Host=localhost;Port=5432;Database=jlpttrainer_dev;Username=YOUR_USER;Password=YOUR_PASSWORD'
@@ -25,18 +29,18 @@ $env:Jwt__ExpiryMinutes = '60'
 dotnet run --project src/JlptTrainer.Api --launch-profile https
 ```
 
-Mở Swagger tại `https://localhost:7017/swagger`. Nếu trình duyệt chưa tin chứng chỉ local, chạy `dotnet dev-certs https --trust`. Đăng ký hoặc đăng nhập để lấy JWT dùng cho những API còn lại. CORS hiện cho phép client tại `http://localhost:4200`.
+Open Swagger at `https://localhost:7017/swagger`. If your browser does not trust the development certificate, run `dotnet dev-certs https --trust`. Register or sign in to get a JWT for protected endpoints. The API currently allows `http://localhost:4200` via CORS. The Vue development server uses a proxy.
 
-Migration tạo schema và các SQL function của dashboard. Kho học liệu có thể được nhập từ template Excel hoặc thêm qua API. Bài luyện từ vựng yêu cầu tối thiểu bốn mục ở cấp đã chọn.
+Migrations create the schema and dashboard SQL functions. Add study material through the API or import it from an Excel template. Vocabulary quizzes require at least four items at the selected level.
 
-Khi nâng cấp database đã có dữ liệu, migration `StrengthenLearningDataConstraints` xác thực cả dữ liệu cũ. Nếu PostgreSQL báo vi phạm ràng buộc, dùng tên constraint để tìm bản ghi liên quan và xác minh cách xử lý trước khi chạy lại. Các trường hợp cần kiểm tra gồm `user_id` mồ côi, số nét kanji không dương, trạng thái SRS âm, số câu đúng vượt tổng số câu và phiên học kết thúc trước lúc bắt đầu. Migration thêm ràng buộc và giữ nguyên dữ liệu.
+When upgrading an existing database, `StrengthenLearningDataConstraints` checks existing rows. If PostgreSQL reports a violation, use the constraint name to identify the affected records and decide how to correct them before retrying. Check for orphaned `user_id` values, nonpositive kanji stroke counts, negative SRS intervals or repetition counts, correct-answer counts outside the question total, and study sessions that end before they start. The migration adds constraints and leaves your data in place.
 
-Chạy lại `.\scripts\update-database.ps1` khi repo có migration mới. Script áp tất cả migration còn thiếu theo thứ tự, gồm `AddUserCredentialVersion` cần cho tính năng đổi mật khẩu. Nó đọc kết nối từ `ConnectionStrings__DefaultConnection` hoặc `src/JlptTrainer.Api/appsettings.Development.json` khi biến môi trường chưa được đặt. Tài khoản cũ bắt đầu ở phiên bản `0` và giữ mật khẩu hiện tại.
+Run `./scripts/update-database.ps1` whenever there are new migrations. The script applies pending migrations in order, including `AddUserCredentialVersion` for password changes. It reads the database connection from `ConnectionStrings__DefaultConnection`, falling back to `src/JlptTrainer.Api/appsettings.Development.json` for local configuration. Existing accounts start at credential version `0` and keep their passwords.
 
-## Quên mật khẩu qua Gmail
+## Password reset with Gmail
 
-1. Bật xác minh hai bước cho tài khoản Gmail dùng để gửi rồi tạo App Password. [Hướng dẫn của Google](https://support.google.com/mail/answer/185833).
-2. Thêm khối sau vào `src/JlptTrainer.Api/appsettings.Development.json`, giữ các mục cấu hình hiện có. File development đã được Git ignore.
+1. Enable 2-Step Verification for the Gmail sender account and create an App Password. [Google's App Password guide](https://support.google.com/mail/answer/185833).
+2. Add this section to `src/JlptTrainer.Api/appsettings.Development.json` alongside the existing settings. Git ignores this development file.
 
    ```json
    "PasswordReset": {
@@ -47,15 +51,15 @@ Chạy lại `.\scripts\update-database.ps1` khi repo có migration mới. Scrip
    }
    ```
 
-3. Từ thư mục `backend`, chạy `.\scripts\update-database.ps1` để áp migration `AddPasswordResetFields`, rồi khởi động lại API. Mở **Quên mật khẩu?** trên trang đăng nhập của Vue. Nhập email của tài khoản JLPT Trainer muốn khôi phục. `GmailAddress` là hộp thư gửi.
+3. From the backend repository root, run `./scripts/update-database.ps1` to apply `AddPasswordResetFields`, then restart the API. Open **Quên mật khẩu?** on the Vue sign-in page and enter the email for the JLPT Trainer account you want to recover. `GmailAddress` is the sender's mailbox.
 
-Backend dùng Gmail SMTP qua STARTTLS ở cổng 587. Khi triển khai, đặt `FrontendOrigin` thành origin HTTPS của Vue và cấp `PasswordReset__GmailAppPassword` qua biến môi trường từ hệ thống quản lý bí mật. Email được gửi qua hàng đợi trong tiến trình API. Nếu API khởi động lại trước khi gửi, người dùng có thể yêu cầu link mới. [Cấu hình SMTP Gmail](https://support.google.com/mail/answer/7104828).
+The API sends mail through Gmail SMTP over STARTTLS on port 587. For deployment, set `FrontendOrigin` to the Vue app's HTTPS origin and supply `PasswordReset__GmailAppPassword` through a secret manager as an environment variable. The API queues email in memory. If the API restarts before a message is sent, users can request a fresh link. [Gmail SMTP settings](https://support.google.com/mail/answer/7104828).
 
-## Kiểm thử
+## Tests
 
 ```powershell
 dotnet test tests/JlptTrainer.Application.UnitTests
 dotnet test JlptTrainer.sln
 ```
 
-Integration test cần Docker chạy Linux containers. Testcontainers khởi tạo PostgreSQL 16, áp migration và ghi dữ liệu test vào database của container.
+Integration tests require Docker with Linux containers. Testcontainers starts PostgreSQL 16, applies migrations, and writes test data to the container database.

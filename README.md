@@ -4,7 +4,6 @@ API học tiếng Nhật theo cấp N5–N1. Repo gồm kho từ vựng, kanji v
 
 - [Kiến trúc và luồng nghiệp vụ](docs/business-flows.md)
 - [Review kỹ thuật và hướng phát triển](docs/technical-review.md)
-- [Hướng dẫn làm việc trong repo](AGENTS.md)
 
 ## Chạy local
 

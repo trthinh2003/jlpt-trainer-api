@@ -1,10 +1,12 @@
 ﻿using JlptTrainer.Application.Common.Interfaces;
 using JlptTrainer.Infrastructure.Persistence;
+using JlptTrainer.Domain.Enums;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using Testcontainers.PostgreSql;
 
 namespace JlptTrainer.Api.IntegrationTests
@@ -46,7 +48,23 @@ namespace JlptTrainer.Api.IntegrationTests
 
             using var scope = Services.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var expected = new NpgsqlConnectionStringBuilder(_dbContainer.GetConnectionString());
+            var actual = new NpgsqlConnectionStringBuilder(dbContext.Database.GetConnectionString());
+            if (expected.Host != actual.Host || expected.Port != actual.Port ||
+                expected.Database != actual.Database || expected.Username != actual.Username)
+            {
+                throw new InvalidOperationException("Integration tests must use their own PostgreSQL container.");
+            }
             await dbContext.Database.MigrateAsync();
+        }
+
+        public async Task SetUserRoleAsync(Guid userId, UserRole role)
+        {
+            using var scope = Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var updated = await db.Users.Where(user => user.Id == userId)
+                .ExecuteUpdateAsync(update => update.SetProperty(user => user.Role, role));
+            Assert.Equal(1, updated);
         }
 
         public new async Task DisposeAsync()

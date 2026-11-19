@@ -55,6 +55,16 @@ Chạy lại `.\scripts\update-database.ps1` khi repo có migration mới. Scrip
 
 Backend dùng Gmail SMTP qua STARTTLS ở cổng 587. Khi triển khai, đặt `FrontendOrigin` thành origin HTTPS của Vue và cấp `PasswordReset__GmailAppPassword` qua biến môi trường từ hệ thống quản lý bí mật. Email được gửi qua hàng đợi trong tiến trình API. Nếu API khởi động lại trước khi gửi, người dùng có thể yêu cầu link mới. [Cấu hình SMTP Gmail](https://support.google.com/mail/answer/7104828).
 
+## Quản lý kho học liệu
+
+Chạy `./scripts/update-database.ps1` để áp `AddUserRole` trước khi khởi động API. Tài khoản có sẵn và tài khoản mới mặc định là người học. Mọi tài khoản đã đăng nhập có thể xem kho và quản lý bộ ôn cá nhân. Quản lý kho được tạo, nhập và xóa từ vựng, kanji và ngữ pháp dùng chung. `GET /api/auth/me` trả `{ "canManageCatalog": true }` cho quản lý kho và `false` cho người học.
+
+Để cấp quyền cho tài khoản đã đăng ký, chạy SQL sau bằng tài khoản quản trị trên đúng database PostgreSQL. Dùng email của tài khoản cần cấp quyền. Để thu hồi, đặt lại `role` về `0`.
+
+```sql
+UPDATE users SET role = 1 WHERE email = lower('manager@example.com');
+```
+
 ## Kiểm thử
 
 ```powershell

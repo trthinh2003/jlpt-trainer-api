@@ -42,7 +42,7 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure();
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -67,7 +67,8 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options => options.AddPolicy(CatalogAuthorization.ManagePolicy,
+    policy => policy.RequireAuthenticatedUser().RequireClaim(CatalogAuthorization.ManageClaim, "true")));
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;

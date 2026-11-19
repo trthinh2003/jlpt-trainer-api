@@ -55,6 +55,16 @@ Swagger は `https://localhost:7017/swagger` で開けます。ブラウザー�
 
 API は Gmail の SMTP サーバーにポート 587 の STARTTLS で接続します。デプロイ時は `FrontendOrigin` に Vue アプリの HTTPS オリジンを設定し、`PasswordReset__GmailAppPassword` をシークレット管理システムから環境変数として渡します。メールは API プロセス内のメモリキューに入ります。送信前に API が再起動した場合は、再設定リンクをもう一度リクエストできます。[Gmail の SMTP 設定](https://support.google.com/mail/answer/7104828)
 
+## 教材の管理
+
+API の起動前に `./scripts/update-database.ps1` を実行し、`AddUserRole` を適用します。既存のアカウントと新規登録アカウントには、既定で学習者の権限が割り当てられます。ログインしたユーザーは教材を閲覧し、自分の復習カードを管理できます。教材管理者は、共有の語彙・漢字・文法の追加、インポート、削除を行えます。`GET /api/auth/me` は教材管理者には `{ "canManageCatalog": true }`、学習者には `false` を返します。
+
+既存のアカウントに教材管理の権限を付与するには、対象の PostgreSQL データベースで、データベース管理者として以下の SQL を実行します。メールアドレスは対象アカウントの登録アドレスに置き換えてください。権限を取り消すには `role` を `0` に戻します。
+
+```sql
+UPDATE users SET role = 1 WHERE email = lower('manager@example.com');
+```
+
 ## テスト
 
 ```powershell

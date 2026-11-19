@@ -2,8 +2,10 @@
 using JlptTrainer.Application.ReviewCards.Commands.AddToReview;
 using JlptTrainer.Application.ReviewCards.Commands.SubmitReview;
 using JlptTrainer.Application.ReviewCards.Queries.GetDueCards;
-using JlptTrainer.Application.Vocabs.Commands.CreateVocab;
+using JlptTrainer.Domain.Entities;
 using JlptTrainer.Domain.Enums;
+using JlptTrainer.Infrastructure.Persistence;
+using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
 
@@ -19,9 +21,7 @@ namespace JlptTrainer.Api.IntegrationTests
             await _client.AuthenticateAsync();
 
             // 1. Tạo Vocab
-            var createResponse = await _client.PostAsJsonAsync("/api/vocabs",
-                new CreateVocabCommand("話す", "はなす", "nói", null, null, JlptLevel.N5));
-            var vocabId = await createResponse.Content.ReadFromJsonAsync<Guid>();
+            var vocabId = await SeedVocabAsync("話す", "はなす", "nói");
 
             // 2. Thêm vào bộ ôn tập
             var addResponse = await _client.PostAsJsonAsync("/api/reviewcards",
@@ -54,9 +54,7 @@ namespace JlptTrainer.Api.IntegrationTests
         {
             await _client.AuthenticateAsync();
 
-            var createResponse = await _client.PostAsJsonAsync("/api/vocabs",
-                new CreateVocabCommand("読む", "よむ", "đọc", null, null, JlptLevel.N5));
-            var vocabId = await createResponse.Content.ReadFromJsonAsync<Guid>();
+            var vocabId = await SeedVocabAsync("読む", "よむ", "đọc");
 
             var firstAdd = await _client.PostAsJsonAsync("/api/reviewcards",
                 new AddToReviewCommand(CardType.Vocab, vocabId));
@@ -66,6 +64,16 @@ namespace JlptTrainer.Api.IntegrationTests
             var secondAdd = await _client.PostAsJsonAsync("/api/reviewcards",
                 new AddToReviewCommand(CardType.Vocab, vocabId));
             secondAdd.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        }
+
+        private async Task<Guid> SeedVocabAsync(string word, string reading, string meaning)
+        {
+            using var scope = factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var vocab = new Vocab { Word = word, Reading = reading, Meaning = meaning, Level = JlptLevel.N5 };
+            db.Vocabs.Add(vocab);
+            await db.SaveChangesAsync();
+            return vocab.Id;
         }
     }
 }

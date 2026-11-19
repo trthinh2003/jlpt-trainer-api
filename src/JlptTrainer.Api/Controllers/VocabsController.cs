@@ -5,6 +5,7 @@ using JlptTrainer.Application.Vocabs.Queries.GetVocabById;
 using JlptTrainer.Application.Vocabs.Queries.GetVocabImportTemplate;
 using JlptTrainer.Application.Vocabs.Queries.GetVocabList;
 using JlptTrainer.Application.Vocabs.Queries.LookupWord;
+using JlptTrainer.Api.Auth;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -38,6 +39,7 @@ namespace JlptTrainer.Api.Controllers
             return Ok(result);
         }
 
+        [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
         [HttpPost]
         public async Task<ActionResult<Guid>> Create(CreateVocabCommand command, CancellationToken cancellationToken)
         {
@@ -45,6 +47,7 @@ namespace JlptTrainer.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id }, id);
         }
 
+        [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
         {
@@ -65,6 +68,7 @@ namespace JlptTrainer.Api.Controllers
         }
 
         // import hàng loạt Vocab từ file Excelormat (dòng đầu là header)
+        [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
         [HttpPost("import")]
         [RequestSizeLimit(5 * 1024 * 1024)] // khớp với giới hạn 5MB đã validate ở Command
         public async Task<ActionResult<ImportVocabResult>> Import(IFormFile file, CancellationToken cancellationToken)

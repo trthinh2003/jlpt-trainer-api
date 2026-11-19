@@ -1,83 +1,76 @@
-﻿using JlptTrainer.Application.Common.Helpers;
+﻿using FluentValidation;
+using JlptTrainer.Application.Common.Helpers;
 using JlptTrainer.Application.Common.Interfaces;
+using JlptTrainer.Application.Kanjis.Commands.CreateKanji;
 using JlptTrainer.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace JlptTrainer.Application.Kanjis.Commands.ImportKanjiFromExcel
+namespace JlptTrainer.Application.Kanjis.Commands.ImportKanjiFromExcel;
+
+public sealed class ImportKanjiFromExcelCommandHandler(
+    IApplicationDbContext dbContext,
+    IExcelReader excelReader,
+    IValidator<CreateKanjiCommand> validator) : IRequestHandler<ImportKanjiFromExcelCommand, ImportKanjiResult>
 {
-    public sealed class ImportKanjiFromExcelCommandHandler(IApplicationDbContext dbContext, IExcelReader excelReader) : IRequestHandler<ImportKanjiFromExcelCommand, ImportKanjiResult>
+    public async Task<ImportKanjiResult> Handle(ImportKanjiFromExcelCommand request, CancellationToken cancellationToken)
     {
-        public async Task<ImportKanjiResult> Handle(ImportKanjiFromExcelCommand request, CancellationToken cancellationToken)
+        using var stream = new MemoryStream(request.FileContent);
+        var rows = excelReader.ReadSheet(stream);
+        var keys = await dbContext.Kanjis.Select(item => item.Character).ToListAsync(cancellationToken);
+        var knownKeys = keys.ToHashSet();
+        var errors = new List<ImportKanjiRowError>();
+        var imported = new List<Kanji>();
+        var duplicates = 0;
+
+        foreach (var row in rows)
         {
-            using var stream = new MemoryStream(request.FileContent);
-            var rows = excelReader.ReadSheet(stream);
-
-            var existingCharacters = await dbContext.Kanjis
-                .Select(k => k.Character)
-                .ToHashSetAsync(cancellationToken);
-
-            var errors = new List<ImportKanjiRowError>();
-            var newKanjis = new List<Kanji>();
-            var seenInFile = new HashSet<string>();
-            var skippedDuplicateCount = 0;
-
-            for (var i = 0; i < rows.Count; i++)
+            var levelCell = row.Get("Level");
+            if (!JlptLevelParser.TryParse(levelCell, out var level))
             {
-                var rowNumber = i + 2;
-                var row = rows[i];
-
-                var character = GetValue(row, "Character");
-                var meaning = GetValue(row, "Meaning");
-                var strokeCountRaw = GetValue(row, "StrokeCount");
-                var levelRaw = GetValue(row, "Level");
-
-                if (string.IsNullOrWhiteSpace(character) || string.IsNullOrWhiteSpace(meaning))
-                {
-                    errors.Add(new ImportKanjiRowError(rowNumber, "Thiếu Character/Meaning bắt buộc."));
-                    continue;
-                }
-
-                if (!int.TryParse(strokeCountRaw, out var strokeCount) || strokeCount <= 0)
-                {
-                    errors.Add(new ImportKanjiRowError(rowNumber, $"StrokeCount \"{strokeCountRaw}\" không hợp lệ (phải là số nguyên dương)."));
-                    continue;
-                }
-
-                if (!JlptLevelParser.TryParse(levelRaw, out var level))
-                {
-                    errors.Add(new ImportKanjiRowError( rowNumber, $"Level \"{levelRaw}\" không hợp lệ (chấp nhận N1-N5 hoặc 1-5)."));
-                    continue;
-                }
-
-                var trimmedCharacter = character.Trim();
-
-                if (existingCharacters.Contains(trimmedCharacter) || !seenInFile.Add(trimmedCharacter))
-                {
-                    skippedDuplicateCount++;
-                    continue;
-                }
-
-                newKanjis.Add(new Kanji
-                {
-                    Character = trimmedCharacter,
-                    OnYomi = GetValue(row, "OnYomi")?.Trim() ?? string.Empty,
-                    KunYomi = GetValue(row, "KunYomi")?.Trim() ?? string.Empty,
-                    Meaning = meaning.Trim(),
-                    StrokeCount = strokeCount,
-                    Level = level
-                });
+                errors.Add(new ImportKanjiRowError(row.Number, $"Level \"{levelCell}\" không hợp lệ (chấp nhận N1-N5 hoặc 1-5)."));
+                continue;
             }
 
-            if (newKanjis.Count > 0)
+            if (!int.TryParse(row.Get("StrokeCount"), out var strokeCount))
             {
-                dbContext.Kanjis.AddRange(newKanjis);
-                await dbContext.SaveChangesAsync(cancellationToken);
+                errors.Add(new ImportKanjiRowError(row.Number, "StrokeCount phải là số nguyên."));
+                continue;
             }
 
-            return new ImportKanjiResult(rows.Count, newKanjis.Count, skippedDuplicateCount, errors);
+            var input = new CreateKanjiCommand(row.Get("Character") ?? "", row.Get("OnYomi") ?? "", row.Get("KunYomi") ?? "",
+                row.Get("Meaning") ?? "", strokeCount, level);
+            var validation = await validator.ValidateAsync(input, cancellationToken);
+            if (!validation.IsValid)
+            {
+                errors.Add(new ImportKanjiRowError(row.Number,
+                    string.Join(" · ", validation.Errors.Select(error => error.ErrorMessage))));
+                continue;
+            }
+
+            if (!knownKeys.Add(input.Character))
+            {
+                duplicates++;
+                continue;
+            }
+
+            imported.Add(new Kanji
+            {
+                Character = input.Character,
+                OnYomi = input.OnYomi,
+                KunYomi = input.KunYomi,
+                Meaning = input.Meaning,
+                StrokeCount = input.StrokeCount,
+                Level = input.Level,
+            });
         }
 
-        private static string? GetValue(IReadOnlyDictionary<string, string?> row, string key) => row.TryGetValue(key, out var value) ? value : null;
+        if (imported.Count > 0)
+        {
+            dbContext.Kanjis.AddRange(imported);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return new ImportKanjiResult(rows.Count, imported.Count, duplicates, errors);
     }
 }

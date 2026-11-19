@@ -60,12 +60,12 @@ namespace JlptTrainer.Api.Controllers
 
         [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
         [HttpPost("import")]
-        [RequestSizeLimit(5 * 1024 * 1024)]
+        [RequestSizeLimit(5 * 1024 * 1024 + 64 * 1024)]
         public async Task<ActionResult<ImportGrammarPointResult>> Import(IFormFile file, CancellationToken cancellationToken)
         {
             if (file.Length == 0)
             {
-                return BadRequest("File không được để trống.");
+                return BadRequest(new { error = "File không được để trống." });
             }
 
             using var memoryStream = new MemoryStream();

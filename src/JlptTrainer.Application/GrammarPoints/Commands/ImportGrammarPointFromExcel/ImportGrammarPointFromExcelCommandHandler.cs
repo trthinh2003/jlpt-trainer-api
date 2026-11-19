@@ -1,75 +1,69 @@
-﻿using JlptTrainer.Application.Common.Helpers;
+﻿using FluentValidation;
+using JlptTrainer.Application.Common.Helpers;
 using JlptTrainer.Application.Common.Interfaces;
+using JlptTrainer.Application.GrammarPoints.Commands.CreateGrammarPoint;
 using JlptTrainer.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace JlptTrainer.Application.GrammarPoints.Commands.ImportGrammarPointFromExcel
+namespace JlptTrainer.Application.GrammarPoints.Commands.ImportGrammarPointFromExcel;
+
+public sealed class ImportGrammarPointFromExcelCommandHandler(
+    IApplicationDbContext dbContext,
+    IExcelReader excelReader,
+    IValidator<CreateGrammarPointCommand> validator) : IRequestHandler<ImportGrammarPointFromExcelCommand, ImportGrammarPointResult>
 {
-    public sealed class ImportGrammarPointFromExcelCommandHandler(IApplicationDbContext dbContext, IExcelReader excelReader) : IRequestHandler<ImportGrammarPointFromExcelCommand, ImportGrammarPointResult>
+    public async Task<ImportGrammarPointResult> Handle(ImportGrammarPointFromExcelCommand request, CancellationToken cancellationToken)
     {
-        public async Task<ImportGrammarPointResult> Handle(ImportGrammarPointFromExcelCommand request, CancellationToken cancellationToken)
+        using var stream = new MemoryStream(request.FileContent);
+        var rows = excelReader.ReadSheet(stream);
+        var keys = await dbContext.GrammarPoints.Select(item => item.Pattern).ToListAsync(cancellationToken);
+        var knownKeys = keys.ToHashSet();
+        var errors = new List<ImportGrammarPointRowError>();
+        var imported = new List<GrammarPoint>();
+        var duplicates = 0;
+
+        foreach (var row in rows)
         {
-            using var stream = new MemoryStream(request.FileContent);
-            var rows = excelReader.ReadSheet(stream);
-
-            var existingPatterns = await dbContext.GrammarPoints
-                .Select(g => g.Pattern)
-                .ToHashSetAsync(cancellationToken);
-
-            var errors = new List<ImportGrammarPointRowError>();
-            var newGrammarPoints = new List<GrammarPoint>();
-            var seenInFile = new HashSet<string>();
-            var skippedDuplicateCount = 0;
-
-            for (var i = 0; i < rows.Count; i++)
+            var levelCell = row.Get("Level");
+            if (!JlptLevelParser.TryParse(levelCell, out var level))
             {
-                var rowNumber = i + 2;
-                var row = rows[i];
-
-                var pattern = GetValue(row, "Pattern");
-                var meaning = GetValue(row, "Meaning");
-                var levelRaw = GetValue(row, "Level");
-
-                if (string.IsNullOrWhiteSpace(pattern) || string.IsNullOrWhiteSpace(meaning))
-                {
-                    errors.Add(new ImportGrammarPointRowError(rowNumber, "Thiếu Pattern/Meaning bắt buộc."));
-                    continue;
-                }
-
-                if (!JlptLevelParser.TryParse(levelRaw, out var level))
-                {
-                    errors.Add(new ImportGrammarPointRowError(rowNumber, $"Level \"{levelRaw}\" không hợp lệ (chấp nhận N1-N5 hoặc 1-5)."));
-                    continue;
-                }
-
-                var trimmedPattern = pattern.Trim();
-
-                if (existingPatterns.Contains(trimmedPattern) || !seenInFile.Add(trimmedPattern))
-                {
-                    skippedDuplicateCount++;
-                    continue;
-                }
-
-                newGrammarPoints.Add(new GrammarPoint
-                {
-                    Pattern = trimmedPattern,
-                    Meaning = meaning.Trim(),
-                    ExampleSentence = GetValue(row, "ExampleSentence")?.Trim(),
-                    ExampleSentenceMeaning = GetValue(row, "ExampleSentenceMeaning")?.Trim(),
-                    Level = level
-                });
+                errors.Add(new ImportGrammarPointRowError(row.Number, $"Level \"{levelCell}\" không hợp lệ (chấp nhận N1-N5 hoặc 1-5)."));
+                continue;
             }
 
-            if (newGrammarPoints.Count > 0)
+            var input = new CreateGrammarPointCommand(row.Get("Pattern") ?? "", row.Get("Meaning") ?? "",
+                row.Get("ExampleSentence"), row.Get("ExampleSentenceMeaning"), level);
+            var validation = await validator.ValidateAsync(input, cancellationToken);
+            if (!validation.IsValid)
             {
-                dbContext.GrammarPoints.AddRange(newGrammarPoints);
-                await dbContext.SaveChangesAsync(cancellationToken);
+                errors.Add(new ImportGrammarPointRowError(row.Number,
+                    string.Join(" · ", validation.Errors.Select(error => error.ErrorMessage))));
+                continue;
             }
 
-            return new ImportGrammarPointResult(rows.Count, newGrammarPoints.Count, skippedDuplicateCount, errors);
+            if (!knownKeys.Add(input.Pattern))
+            {
+                duplicates++;
+                continue;
+            }
+
+            imported.Add(new GrammarPoint
+            {
+                Pattern = input.Pattern,
+                Meaning = input.Meaning,
+                ExampleSentence = input.ExampleSentence,
+                ExampleSentenceMeaning = input.ExampleSentenceMeaning,
+                Level = input.Level,
+            });
         }
 
-        private static string? GetValue(IReadOnlyDictionary<string, string?> row, string key) => row.TryGetValue(key, out var value) ? value : null;
+        if (imported.Count > 0)
+        {
+            dbContext.GrammarPoints.AddRange(imported);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return new ImportGrammarPointResult(rows.Count, imported.Count, duplicates, errors);
     }
 }

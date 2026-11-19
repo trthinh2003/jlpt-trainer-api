@@ -7,6 +7,9 @@ namespace JlptTrainer.Domain.Entities
     {
         public Guid UserId { get; set; }
 
+        public Guid? AttemptId { get; set; }
+        public int?[]? SelectedChoices { get; set; }
+
         public JlptLevel Level { get; set; } = JlptLevel.N5;
 
         public int TotalQuestions { get; set; }

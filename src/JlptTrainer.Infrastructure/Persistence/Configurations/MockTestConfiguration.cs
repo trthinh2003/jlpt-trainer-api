@@ -19,6 +19,14 @@ namespace JlptTrainer.Infrastructure.Persistence.Configurations
             builder.Ignore(m => m.ScorePercentage); // - không map vào cột DB, tránh EF tạo cột "score_percentage" thừa.
 
             builder.HasIndex(m => new { m.UserId, m.TakenAt });
+            builder.HasOne<MockTestAttempt>()
+                .WithOne()
+                .HasForeignKey<MockTest>(m => m.AttemptId)
+                .OnDelete(DeleteBehavior.Restrict);
+            builder.ToTable(table => table.HasCheckConstraint(
+                "ck_mock_tests_attempt_answers",
+                "(attempt_id IS NULL AND selected_choices IS NULL) OR " +
+                "(attempt_id IS NOT NULL AND selected_choices IS NOT NULL AND cardinality(selected_choices) = total_questions)"));
         }
     }
 }

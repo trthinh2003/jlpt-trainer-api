@@ -132,6 +132,10 @@ namespace JlptTrainer.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<Guid?>("AttemptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("attempt_id");
+
                     b.Property<int>("CorrectAnswers")
                         .HasColumnType("integer")
                         .HasColumnName("correct_answers");
@@ -148,6 +152,10 @@ namespace JlptTrainer.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("level");
 
+                    b.PrimitiveCollection<int?[]>("SelectedChoices")
+                        .HasColumnType("integer[]")
+                        .HasColumnName("selected_choices");
+
                     b.Property<DateTimeOffset>("TakenAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("taken_at");
@@ -163,12 +171,97 @@ namespace JlptTrainer.Infrastructure.Migrations
                     b.HasKey("Id")
                         .HasName("pk_mock_tests");
 
+                    b.HasIndex("AttemptId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_mock_tests_attempt_id");
+
                     b.HasIndex("UserId", "TakenAt")
                         .HasDatabaseName("ix_mock_tests_user_id_taken_at");
 
                     b.ToTable("mock_tests", null, t =>
                         {
+                            t.HasCheckConstraint("ck_mock_tests_attempt_answers", "(attempt_id IS NULL AND selected_choices IS NULL) OR (attempt_id IS NOT NULL AND selected_choices IS NOT NULL AND cardinality(selected_choices) = total_questions)");
+
                             t.HasCheckConstraint("ck_mock_tests_valid_answer_counts", "correct_answers >= 0 AND correct_answers <= total_questions");
+                        });
+                });
+
+            modelBuilder.Entity("JlptTrainer.Domain.Entities.MockTestAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("integer")
+                        .HasColumnName("level");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_mock_test_attempts");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_mock_test_attempts_user_id");
+
+                    b.ToTable("mock_test_attempts", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_mock_test_attempts_expiry", "expires_at > created_at");
+                        });
+                });
+
+            modelBuilder.Entity("JlptTrainer.Domain.Entities.MockTestAttemptQuestion", b =>
+                {
+                    b.Property<Guid>("AttemptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("attempt_id");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.PrimitiveCollection<string[]>("Choices")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("choices");
+
+                    b.Property<int>("CorrectChoiceIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("correct_choice_index");
+
+                    b.Property<string>("Reading")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("reading");
+
+                    b.Property<Guid?>("SourceVocabId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_vocab_id");
+
+                    b.Property<string>("Word")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("word");
+
+                    b.HasKey("AttemptId", "Position")
+                        .HasName("pk_mock_test_attempt_questions");
+
+                    b.ToTable("mock_test_attempt_questions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_mock_test_attempt_questions_choices", "cardinality(choices) = 4 AND correct_choice_index >= 0 AND correct_choice_index < cardinality(choices)");
                         });
                 });
 
@@ -450,12 +543,38 @@ namespace JlptTrainer.Infrastructure.Migrations
 
             modelBuilder.Entity("JlptTrainer.Domain.Entities.MockTest", b =>
                 {
+                    b.HasOne("JlptTrainer.Domain.Entities.MockTestAttempt", null)
+                        .WithOne()
+                        .HasForeignKey("JlptTrainer.Domain.Entities.MockTest", "AttemptId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_mock_tests_mock_test_attempts_attempt_id");
+
                     b.HasOne("JlptTrainer.Domain.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_mock_tests_users_user_id");
+                });
+
+            modelBuilder.Entity("JlptTrainer.Domain.Entities.MockTestAttempt", b =>
+                {
+                    b.HasOne("JlptTrainer.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_mock_test_attempts_users_user_id");
+                });
+
+            modelBuilder.Entity("JlptTrainer.Domain.Entities.MockTestAttemptQuestion", b =>
+                {
+                    b.HasOne("JlptTrainer.Domain.Entities.MockTestAttempt", null)
+                        .WithMany("Questions")
+                        .HasForeignKey("AttemptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_mock_test_attempt_questions_mock_test_attempts_attempt_id");
                 });
 
             modelBuilder.Entity("JlptTrainer.Domain.Entities.ReviewCard", b =>
@@ -486,6 +605,11 @@ namespace JlptTrainer.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_study_sessions_users_user_id");
+                });
+
+            modelBuilder.Entity("JlptTrainer.Domain.Entities.MockTestAttempt", b =>
+                {
+                    b.Navigation("Questions");
                 });
 #pragma warning restore 612, 618
         }

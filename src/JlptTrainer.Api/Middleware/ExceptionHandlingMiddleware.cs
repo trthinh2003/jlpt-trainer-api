@@ -30,6 +30,8 @@ namespace JlptTrainer.Api.Middleware
 
                 NotFoundException => (HttpStatusCode.NotFound, exception.Message),
 
+                ExcelWorkbookException => (HttpStatusCode.BadRequest, exception.Message),
+
                 MockTestAttemptExpiredException => (HttpStatusCode.Gone, exception.Message),
 
                 ConflictException => (HttpStatusCode.Conflict, exception.Message),

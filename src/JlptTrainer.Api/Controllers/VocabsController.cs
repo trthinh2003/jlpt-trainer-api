@@ -70,12 +70,12 @@ namespace JlptTrainer.Api.Controllers
         // import hàng loạt Vocab từ file Excelormat (dòng đầu là header)
         [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
         [HttpPost("import")]
-        [RequestSizeLimit(5 * 1024 * 1024)] // khớp với giới hạn 5MB đã validate ở Command
+        [RequestSizeLimit(5 * 1024 * 1024 + 64 * 1024)]
         public async Task<ActionResult<ImportVocabResult>> Import(IFormFile file, CancellationToken cancellationToken)
         {
             if (file.Length == 0)
             {
-                return BadRequest("File không được để trống.");
+                return BadRequest(new { error = "File không được để trống." });
             }
 
             using var memoryStream = new MemoryStream();

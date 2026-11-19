@@ -33,6 +33,8 @@ Swagger は `https://localhost:7017/swagger` で開けます。ブラウザー�
 
 マイグレーションはデータベーススキーマとダッシュボード用の SQL 関数を作成します。教材は API から追加するか、Excel テンプレートを使ってインポートできます。語彙クイズには、選択したレベルの語彙が 4 件以上必要です。
 
+既存環境で学習進捗画面を有効にするには、API を停止し、`./scripts/update-database.ps1` で `AddReviewEvents` を適用してから、新しい API を起動します。各カードの最後の復習日時が履歴に移行され、その後は評価ごとに 1 件記録されます。同じカードと評価を再送する場合は、任意の UUID `requestId` を再利用します。`GET /api/dashboard/heatmap` は UTC 日付別の復習回数、`GET /api/dashboard/progress` はログインユーザーの習熟度とクイズの平均点を返します。
+
 既存のデータベースを更新する際は、`StrengthenLearningDataConstraints` が既存データの制約違反を検証します。PostgreSQL から違反が報告された場合は、制約名で対象レコードを特定し、修正方法を確認してから再実行してください。主な確認対象は、存在しないユーザーを参照する `user_id`、画数が 0 以下の漢字、負の復習間隔や反復回数、問題数の範囲外の正答数、開始時刻より前に終了する学習セッションです。マイグレーションは制約を追加し、既存データを保持します。
 
 新しいマイグレーションが追加されたら `./scripts/update-database.ps1` を再実行してください。パスワード変更に必要な `AddUserCredentialVersion` を含め、未適用のマイグレーションを順に適用します。接続設定は `ConnectionStrings__DefaultConnection` から取得し、未設定の場合は `src/JlptTrainer.Api/appsettings.Development.json` のローカル設定を使用します。既存アカウントの認証情報のバージョンは `0` から始まり、現在のパスワードを引き続き使えます。

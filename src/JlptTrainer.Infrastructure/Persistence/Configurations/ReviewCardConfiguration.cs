@@ -20,6 +20,7 @@ namespace JlptTrainer.Infrastructure.Persistence.Configurations
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasIndex(c => new { c.UserId, c.NextReviewDate });
+            builder.Property(c => c.Version).IsConcurrencyToken();
 
             builder.HasIndex(c => new { c.UserId, c.CardType, c.ReferenceId })
                 .IsUnique();  // 1 user không thể có 2 ReviewCard trỏ cùng 1 nội dung (Vocab/Kanji/Grammar) trùng CardType

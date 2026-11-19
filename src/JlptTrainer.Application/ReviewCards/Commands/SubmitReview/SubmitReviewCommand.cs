@@ -5,6 +5,7 @@ namespace JlptTrainer.Application.ReviewCards.Commands.SubmitReview
 {
     public sealed record SubmitReviewCommand(
         Guid ReviewCardId,
-        ReviewGrade Grade
+        ReviewGrade Grade,
+        Guid? RequestId = null
     ) : IRequest<SubmitReviewResult>;
 }

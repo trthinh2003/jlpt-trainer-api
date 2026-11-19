@@ -11,6 +11,9 @@ namespace JlptTrainer.Application.ReviewCards.Commands.SubmitReview
 
             RuleFor(x => x.Grade)
                 .IsInEnum();
+
+            RuleFor(x => x.RequestId)
+                .NotEqual(Guid.Empty);
         }
     }
 }

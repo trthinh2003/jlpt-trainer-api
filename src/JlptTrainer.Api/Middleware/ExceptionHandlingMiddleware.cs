@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using FluentValidation;
 using JlptTrainer.Application.Common.Exceptions;
+using Microsoft.EntityFrameworkCore;
 
 namespace JlptTrainer.Api.Middleware
 {
@@ -29,6 +30,8 @@ namespace JlptTrainer.Api.Middleware
                 NotFoundException => (HttpStatusCode.NotFound, exception.Message),
 
                 ConflictException => (HttpStatusCode.Conflict, exception.Message),
+
+                DbUpdateConcurrencyException => (HttpStatusCode.Conflict, "Dữ liệu vừa thay đổi. Vui lòng tải lại và thử lại."),
 
                 InvalidCredentialsException => (HttpStatusCode.Unauthorized, exception.Message),
 

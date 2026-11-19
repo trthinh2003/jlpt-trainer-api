@@ -33,6 +33,8 @@ Open Swagger at `https://localhost:7017/swagger`. If your browser does not trust
 
 Migrations create the schema and dashboard SQL functions. Add study material through the API or import it from an Excel template. Vocabulary quizzes require at least four items at the selected level.
 
+To enable the study dashboard on an existing installation, stop the API, run `./scripts/update-database.ps1` to apply `AddReviewEvents`, then restart with the updated API. The migration restores the last recorded review for each existing card. Each new grade creates a history entry. Reuse the optional `requestId` UUID when retrying a review submission with the same card and grade. `GET /api/dashboard/heatmap` counts reviews by UTC day, and `GET /api/dashboard/progress` returns card mastery and quiz averages for the signed-in user.
+
 When upgrading an existing database, `StrengthenLearningDataConstraints` checks existing rows. If PostgreSQL reports a violation, use the constraint name to identify the affected records and decide how to correct them before retrying. Check for orphaned `user_id` values, nonpositive kanji stroke counts, negative SRS intervals or repetition counts, correct-answer counts outside the question total, and study sessions that end before they start. The migration adds constraints and leaves your data in place.
 
 Run `./scripts/update-database.ps1` whenever there are new migrations. The script applies pending migrations in order, including `AddUserCredentialVersion` for password changes. It reads the database connection from `ConnectionStrings__DefaultConnection`, falling back to `src/JlptTrainer.Api/appsettings.Development.json` for local configuration. Existing accounts start at credential version `0` and keep their passwords.

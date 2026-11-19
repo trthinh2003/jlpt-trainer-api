@@ -8,8 +8,6 @@ using JlptTrainer.Application.Vocabs.Commands.CreateVocab;
 using JlptTrainer.Domain.Entities;
 using JlptTrainer.Domain.Enums;
 using JlptTrainer.Infrastructure.Persistence;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -17,8 +15,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace JlptTrainer.Api.IntegrationTests;
 
-public sealed class DashboardEndpointsTests(DashboardWebApplicationFactory factory)
-    : IClassFixture<DashboardWebApplicationFactory>
+public sealed class DashboardEndpointsTests(ClockWebApplicationFactory factory)
+    : IClassFixture<ClockWebApplicationFactory>
 {
     [Fact]
     public async Task Dashboard_GroupsReviewsByUtcDayAndKeepsHistoryAfterCardDeletion()
@@ -155,21 +153,4 @@ public sealed class DashboardEndpointsTests(DashboardWebApplicationFactory facto
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<SubmitReviewResult>())!;
     }
-}
-
-public sealed class DashboardWebApplicationFactory : CustomWebApplicationFactory
-{
-    public DashboardTestClock Clock { get; } = new();
-
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
-    {
-        base.ConfigureWebHost(builder);
-        builder.ConfigureTestServices(services => services.AddSingleton<TimeProvider>(Clock));
-    }
-}
-
-public sealed class DashboardTestClock : TimeProvider
-{
-    public DateTimeOffset Now { get; set; } = DateTimeOffset.UtcNow;
-    public override DateTimeOffset GetUtcNow() => Now;
 }

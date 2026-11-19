@@ -16,6 +16,7 @@ namespace JlptTrainer.Infrastructure.Persistence
         public DbSet<ReviewEvent> ReviewEvents => Set<ReviewEvent>();
         public DbSet<StudySession> StudySessions => Set<StudySession>();
         public DbSet<MockTest> MockTests => Set<MockTest>();
+        public DbSet<MockTestAttempt> MockTestAttempts => Set<MockTestAttempt>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -13,6 +13,7 @@ namespace JlptTrainer.Application.Common.Interfaces
         DbSet<ReviewEvent> ReviewEvents { get; }
         DbSet<StudySession> StudySessions { get; }
         DbSet<MockTest> MockTests { get; }
+        DbSet<MockTestAttempt> MockTestAttempts { get; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }

@@ -8,7 +8,7 @@ The learner interface lives in the companion [Vue frontend](https://github.com/t
 
 ## Run locally
 
-Install the .NET 9 SDK, PostgreSQL, and `dotnet-ef` 9.x. Create a development database. From the repository root in PowerShell, replace the example settings with your local values.
+Install the .NET 10 SDK, PostgreSQL, and `dotnet-ef` 10.x. Create a development database. From the repository root in PowerShell, replace the example settings with your local values.
 
 ```powershell
 $env:ConnectionStrings__DefaultConnection = 'Host=localhost;Port=5432;Database=jlpttrainer_dev;Username=YOUR_USER;Password=YOUR_PASSWORD'
@@ -31,9 +31,13 @@ dotnet run --project src/JlptTrainer.Api --launch-profile https
 
 Open Swagger at `https://localhost:7017/swagger`. If your browser does not trust the development certificate, run `dotnet dev-certs https --trust`. Register or sign in to get a JWT for protected endpoints. The API currently allows `http://localhost:4200` via CORS. The Vue development server uses a proxy.
 
-Migrations create the schema and dashboard SQL functions. Add study material through the API or import it from an Excel template. Vocabulary quizzes require at least four items at the selected level.
+Migrations create the schema and dashboard SQL functions. Add study material through the API or import it from an Excel template. Vocabulary quizzes require at least four distinct meanings at the selected level.
+
+Apply `AddMockTestAttempts` with `./scripts/update-database.ps1` before starting the updated API. Create a 15-minute vocabulary quiz with `POST /api/mocktests/attempts` using `level` and `questionCount`. Resume with `GET /api/mocktests/attempts/{id}`. Submit with `POST /api/mocktests/attempts/{id}/submit` using one `selectedChoices` entry per question (0–3 or `null` for skipped questions). The response is the result ID for `GET /api/mocktests/{id}`. The previous submit route returns HTTP 410. Existing results remain available in history and as PDFs.
 
 To enable the study dashboard on an existing installation, stop the API, run `./scripts/update-database.ps1` to apply `AddReviewEvents`, then restart with the updated API. The migration restores the last recorded review for each existing card. Each new grade creates a history entry. Reuse the optional `requestId` UUID when retrying a review submission with the same card and grade. `GET /api/dashboard/heatmap` counts reviews by UTC day, and `GET /api/dashboard/progress` returns card mastery and quiz averages for the signed-in user.
+
+The `LinkQuizQuestionsToVocabulary` migration enables adding missed or skipped vocabulary to spaced repetition for newly issued quizzes. Quiz history keeps its original questions even if a vocabulary item is later removed.
 
 When upgrading an existing database, `StrengthenLearningDataConstraints` checks existing rows. If PostgreSQL reports a violation, use the constraint name to identify the affected records and decide how to correct them before retrying. Check for orphaned `user_id` values, nonpositive kanji stroke counts, negative SRS intervals or repetition counts, correct-answer counts outside the question total, and study sessions that end before they start. The migration adds constraints and leaves your data in place.
 

@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using FluentValidation;
 using JlptTrainer.Application.Common.Exceptions;
+using JlptTrainer.Application.MockTests.Commands.SubmitMockTestAttempt;
 using Microsoft.EntityFrameworkCore;
 
 namespace JlptTrainer.Api.Middleware
@@ -28,6 +29,8 @@ namespace JlptTrainer.Api.Middleware
                     string.Join("; ", validationEx.Errors.Select(e => e.ErrorMessage))),
 
                 NotFoundException => (HttpStatusCode.NotFound, exception.Message),
+
+                MockTestAttemptExpiredException => (HttpStatusCode.Gone, exception.Message),
 
                 ConflictException => (HttpStatusCode.Conflict, exception.Message),
 

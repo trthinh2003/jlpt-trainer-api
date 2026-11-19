@@ -8,7 +8,7 @@ JLPT N5〜N1 の学習を支援する ASP.NET Core API です。語彙・漢字�
 
 ## ローカルでの実行
 
-.NET 9 SDK、PostgreSQL、`dotnet-ef` 9.x が必要です。開発用データベースを作成し、リポジトリのルートで PowerShell を開きます。以下のサンプルをローカル環境に合わせて変更してください。
+.NET 10 SDK、PostgreSQL、`dotnet-ef` 10.x が必要です。開発用データベースを作成し、リポジトリのルートで PowerShell を開きます。以下のサンプルをローカル環境に合わせて変更してください。
 
 ```powershell
 $env:ConnectionStrings__DefaultConnection = 'Host=localhost;Port=5432;Database=jlpttrainer_dev;Username=YOUR_USER;Password=YOUR_PASSWORD'
@@ -31,9 +31,13 @@ dotnet run --project src/JlptTrainer.Api --launch-profile https
 
 Swagger は `https://localhost:7017/swagger` で開けます。ブラウザーが開発用証明書を信頼していない場合は、`dotnet dev-certs https --trust` を実行してください。アカウント登録またはログインで JWT を取得すると、認証が必要な API を利用できます。API の CORS 設定では `http://localhost:4200` を許可しています。Vue の開発サーバーはプロキシ経由で接続します。
 
-マイグレーションはデータベーススキーマとダッシュボード用の SQL 関数を作成します。教材は API から追加するか、Excel テンプレートを使ってインポートできます。語彙クイズには、選択したレベルの語彙が 4 件以上必要です。
+マイグレーションはデータベーススキーマとダッシュボード用の SQL 関数を作成します。教材は API から追加するか、Excel テンプレートを使ってインポートできます。語彙クイズには、選択したレベルに異なる意味が 4 種類以上必要です。
+
+新しい API を起動する前に、`./scripts/update-database.ps1` で `AddMockTestAttempts` を適用します。`POST /api/mocktests/attempts` に `level` と `questionCount` を送ると、制限時間 15 分のクイズを開始できます。`GET /api/mocktests/attempts/{id}` で再開し、`POST /api/mocktests/attempts/{id}/submit` に各問題の選択肢番号（0〜3、未回答は `null`）を `selectedChoices` として送信します。返された結果 ID は `GET /api/mocktests/{id}` で使います。旧提出 API は HTTP 410 を返します。過去の結果は履歴と PDF で引き続き確認できます。
 
 既存環境で学習進捗画面を有効にするには、API を停止し、`./scripts/update-database.ps1` で `AddReviewEvents` を適用してから、新しい API を起動します。各カードの最後の復習日時が履歴に移行され、その後は評価ごとに 1 件記録されます。同じカードと評価を再送する場合は、任意の UUID `requestId` を再利用します。`GET /api/dashboard/heatmap` は UTC 日付別の復習回数、`GET /api/dashboard/progress` はログインユーザーの習熟度とクイズの平均点を返します。
+
+`LinkQuizQuestionsToVocabulary` の適用後に作成したクイズでは、誤答・未回答の語彙を復習に追加できます。元の語彙を教材から削除しても、履歴には出題された問題が残ります。
 
 既存のデータベースを更新する際は、`StrengthenLearningDataConstraints` が既存データの制約違反を検証します。PostgreSQL から違反が報告された場合は、制約名で対象レコードを特定し、修正方法を確認してから再実行してください。主な確認対象は、存在しないユーザーを参照する `user_id`、画数が 0 以下の漢字、負の復習間隔や反復回数、問題数の範囲外の正答数、開始時刻より前に終了する学習セッションです。マイグレーションは制約を追加し、既存データを保持します。
 

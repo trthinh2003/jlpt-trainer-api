@@ -8,7 +8,7 @@ Giao diện học nằm ở repo [Vue frontend](https://github.com/trthinh2003/j
 
 ## Chạy local
 
-Cần .NET SDK 9, PostgreSQL và công cụ `dotnet-ef` 9.x. Tạo database phát triển riêng. Trong PowerShell, từ thư mục gốc repo, thay các giá trị mẫu bằng cấu hình local của bạn.
+Cần .NET SDK 10, PostgreSQL và công cụ `dotnet-ef` 10.x. Tạo database phát triển riêng. Trong PowerShell, từ thư mục gốc repo, thay các giá trị mẫu bằng cấu hình local của bạn.
 
 ```powershell
 $env:ConnectionStrings__DefaultConnection = 'Host=localhost;Port=5432;Database=jlpttrainer_dev;Username=YOUR_USER;Password=YOUR_PASSWORD'
@@ -31,9 +31,13 @@ dotnet run --project src/JlptTrainer.Api --launch-profile https
 
 Mở Swagger tại `https://localhost:7017/swagger`. Nếu trình duyệt chưa tin chứng chỉ local, chạy `dotnet dev-certs https --trust`. Đăng ký hoặc đăng nhập để lấy JWT dùng cho những API còn lại. CORS hiện cho phép client tại `http://localhost:4200`.
 
-Migration tạo schema và các SQL function của dashboard. Kho học liệu có thể được nhập từ template Excel hoặc thêm qua API. Bài luyện từ vựng yêu cầu tối thiểu bốn mục ở cấp đã chọn.
+Migration tạo schema và các SQL function của dashboard. Kho học liệu có thể được nhập từ template Excel hoặc thêm qua API. Bài luyện từ vựng cần ít nhất bốn nghĩa khác nhau ở cấp đã chọn.
+
+Áp dụng `AddMockTestAttempts` bằng `./scripts/update-database.ps1` trước khi chạy API mới. Dùng `POST /api/mocktests/attempts` với `level` và `questionCount` để tạo bài luyện có hạn 15 phút. Đọc lại đề bằng `GET /api/mocktests/attempts/{id}`. Khi nộp tại `POST /api/mocktests/attempts/{id}/submit`, gửi `selectedChoices` theo thứ tự đề với chỉ số 0–3 hoặc `null` cho câu bỏ trống. API trả ID để xem kết quả qua `GET /api/mocktests/{id}`. Đường nộp cũ trả HTTP 410. Các kết quả cũ vẫn xem được trong lịch sử và tải được PDF.
 
 Để mở dashboard trên bản cài đặt hiện có, dừng API, chạy `./scripts/update-database.ps1` để áp dụng `AddReviewEvents`, rồi khởi động bản API mới. Migration khôi phục lần ôn gần nhất còn lưu trên mỗi thẻ. Từ đó mỗi lượt chấm tạo một bản ghi lịch sử. Khi gửi lại cùng thẻ và mức chấm, dùng lại UUID `requestId` tùy chọn. `GET /api/dashboard/heatmap` đếm lượt ôn theo ngày UTC. `GET /api/dashboard/progress` trả mức độ ghi nhớ và điểm bài luyện trung bình của người đăng nhập.
+
+Migration `LinkQuizQuestionsToVocabulary` cho phép thêm từ của câu sai hoặc bỏ trống vào bộ ôn đối với đề được cấp mới. Lịch sử vẫn giữ nguyên câu hỏi nếu từ nguồn bị gỡ khỏi kho.
 
 Khi nâng cấp database đã có dữ liệu, migration `StrengthenLearningDataConstraints` xác thực cả dữ liệu cũ. Nếu PostgreSQL báo vi phạm ràng buộc, dùng tên constraint để tìm bản ghi liên quan và xác minh cách xử lý trước khi chạy lại. Các trường hợp cần kiểm tra gồm `user_id` mồ côi, số nét kanji không dương, trạng thái SRS âm, số câu đúng vượt tổng số câu và phiên học kết thúc trước lúc bắt đầu. Migration thêm ràng buộc và giữ nguyên dữ liệu.
 

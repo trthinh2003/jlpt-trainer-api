@@ -31,13 +31,12 @@ namespace JlptTrainer.Application.ReviewCards.Commands.AddToReview
                 throw new NotFoundException(request.CardType.ToString(), request.ReferenceId);
             }
 
-            var alreadyAdded = await dbContext.ReviewCards.AnyAsync(
-                c => c.UserId == userId && c.CardType == request.CardType && c.ReferenceId == request.ReferenceId,
-                cancellationToken);
-
-            if (alreadyAdded)
+            var matchingCards = dbContext.ReviewCards.Where(
+                c => c.UserId == userId && c.CardType == request.CardType && c.ReferenceId == request.ReferenceId);
+            const string duplicateMessage = "Nội dung này đã có trong bộ ôn tập của bạn rồi.";
+            if (await matchingCards.AnyAsync(cancellationToken))
             {
-                throw new ConflictException("Nội dung này đã có trong bộ ôn tập của bạn rồi.");
+                throw new ConflictException(duplicateMessage);
             }
 
             var now = timeProvider.GetUtcNow();
@@ -46,7 +45,18 @@ namespace JlptTrainer.Application.ReviewCards.Commands.AddToReview
             var card = new ReviewCard(userId, request.CardType, request.ReferenceId, initialState);
 
             dbContext.ReviewCards.Add(card);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException)
+            {
+                if (await matchingCards.AnyAsync(cancellationToken))
+                {
+                    throw new ConflictException(duplicateMessage);
+                }
+                throw;
+            }
 
             return card.Id;
         }

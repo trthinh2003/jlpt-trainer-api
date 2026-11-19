@@ -15,7 +15,7 @@ namespace JlptTrainer.Application.MockTests.Queries.GetMockTestHistory
             var totalCount = await query.CountAsync(cancellationToken);
 
             var items = await query
-                .OrderByDescending(m => m.TakenAt) // bài mới nhất lên đầu
+                .OrderByDescending(m => m.TakenAt).ThenByDescending(m => m.Id)
                 .Skip((request.PageNumber - 1) * request.PageSize)
                 .Take(request.PageSize)
                 .Select(m => new MockTestHistoryItemDto(

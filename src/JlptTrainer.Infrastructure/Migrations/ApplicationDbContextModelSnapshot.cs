@@ -215,6 +215,11 @@ namespace JlptTrainer.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
                     b.HasKey("Id")
                         .HasName("pk_review_cards");
 
@@ -231,6 +236,55 @@ namespace JlptTrainer.Infrastructure.Migrations
 
                             t.HasCheckConstraint("ck_review_cards_nonnegative_repetitions", "repetitions >= 0");
                         });
+                });
+
+            modelBuilder.Entity("JlptTrainer.Domain.Entities.ReviewEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int?>("Grade")
+                        .HasColumnType("integer")
+                        .HasColumnName("grade");
+
+                    b.Property<int>("IntervalDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("interval_days");
+
+                    b.Property<DateTimeOffset>("NextReviewDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_review_date");
+
+                    b.Property<Guid?>("RequestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("request_id");
+
+                    b.Property<Guid>("ReviewCardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("review_card_id");
+
+                    b.Property<DateTimeOffset>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_review_events");
+
+                    b.HasIndex("UserId", "RequestId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_review_events_user_id_request_id")
+                        .HasFilter("request_id IS NOT NULL");
+
+                    b.HasIndex("UserId", "ReviewedAt")
+                        .HasDatabaseName("ix_review_events_user_id_reviewed_at");
+
+                    b.ToTable("review_events", (string)null);
                 });
 
             modelBuilder.Entity("JlptTrainer.Domain.Entities.StudySession", b =>
@@ -412,6 +466,16 @@ namespace JlptTrainer.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_review_cards_users_user_id");
+                });
+
+            modelBuilder.Entity("JlptTrainer.Domain.Entities.ReviewEvent", b =>
+                {
+                    b.HasOne("JlptTrainer.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_review_events_users_user_id");
                 });
 
             modelBuilder.Entity("JlptTrainer.Domain.Entities.StudySession", b =>

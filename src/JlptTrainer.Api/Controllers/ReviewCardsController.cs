@@ -33,11 +33,11 @@ namespace JlptTrainer.Api.Controllers
         [HttpPost("{id:guid}/review")]
         public async Task<ActionResult<SubmitReviewResult>> SubmitReview(Guid id, [FromBody] SubmitReviewRequest request, CancellationToken cancellationToken = default)
         {
-            var result = await mediator.Send(new SubmitReviewCommand(id, request.Grade), cancellationToken);
+            var result = await mediator.Send(new SubmitReviewCommand(id, request.Grade, request.RequestId), cancellationToken);
 
             return Ok(result);
         }
     }
 
-    public sealed record SubmitReviewRequest(ReviewGrade Grade);
+    public sealed record SubmitReviewRequest(ReviewGrade Grade, Guid? RequestId = null);
 }

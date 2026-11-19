@@ -32,6 +32,7 @@ namespace JlptTrainer.Domain.Entities
         public DateTimeOffset NextReviewDate { get; private set; }
 
         public DateTimeOffset? LastReviewedAt { get; private set; }
+        public int Version { get; private set; }
 
         public bool IsDue(DateTimeOffset now) => NextReviewDate <= now;
 
@@ -39,6 +40,7 @@ namespace JlptTrainer.Domain.Entities
         {
             SetSchedule(result);
             LastReviewedAt = reviewedAt;
+            Version++;
         }
 
         private void SetSchedule(SrsResult result)

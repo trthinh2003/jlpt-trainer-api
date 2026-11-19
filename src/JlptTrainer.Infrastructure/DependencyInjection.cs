@@ -37,7 +37,8 @@ public static class DependencyInjection
             provider => provider.GetRequiredService<ApplicationDbContext>());
 
         // dùng chung 1 connection string cho cả EF Core (write) và Dapper (read nặng)
-        services.AddSingleton<IDapperContext>(provider => new DapperContext(GetConnectionString(provider)));
+        services.AddSingleton(provider => new DapperContext(GetConnectionString(provider)));
+        services.AddSingleton<IDashboardReadService, DashboardReadService>();
 
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUserService, CurrentUserService>();

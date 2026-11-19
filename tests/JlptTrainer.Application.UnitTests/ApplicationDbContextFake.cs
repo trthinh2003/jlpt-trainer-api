@@ -18,6 +18,7 @@ namespace JlptTrainer.Application.UnitTests
         public DbSet<Kanji> Kanjis => Set<Kanji>();
         public DbSet<GrammarPoint> GrammarPoints => Set<GrammarPoint>();
         public DbSet<ReviewCard> ReviewCards => Set<ReviewCard>();
+        public DbSet<ReviewEvent> ReviewEvents => Set<ReviewEvent>();
         public DbSet<StudySession> StudySessions => Set<StudySession>();
         public DbSet<MockTest> MockTests => Set<MockTest>();
     }

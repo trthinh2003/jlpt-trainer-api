@@ -1,10 +1,9 @@
-﻿using JlptTrainer.Application.Common.Interfaces;
-using Npgsql;
+﻿using Npgsql;
 using System.Data;
 
 namespace JlptTrainer.Infrastructure.Persistence
 {
-    public class DapperContext(string connectionString) : IDapperContext
+    internal sealed class DapperContext(string connectionString)
     {
         public IDbConnection CreateConnection() => new NpgsqlConnection(connectionString);
     }

@@ -10,6 +10,7 @@ namespace JlptTrainer.Application.Common.Interfaces
         DbSet<Kanji> Kanjis { get; }
         DbSet<GrammarPoint> GrammarPoints { get; }
         DbSet<ReviewCard> ReviewCards { get; }
+        DbSet<ReviewEvent> ReviewEvents { get; }
         DbSet<StudySession> StudySessions { get; }
         DbSet<MockTest> MockTests { get; }
 

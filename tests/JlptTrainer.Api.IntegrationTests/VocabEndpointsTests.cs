@@ -25,7 +25,7 @@ namespace JlptTrainer.Api.IntegrationTests
         [Fact]
         public async Task Create_WithValidData_ShouldReturnCreatedAndBeRetrievable()
         {
-            await _client.AuthenticateAsync();
+            await _client.AuthenticateAsCatalogManagerAsync(factory);
 
             var command = new CreateVocabCommand("飲む", "のむ", "uống", "水を飲む", "Uống nước", JlptLevel.N5);
             var createResponse = await _client.PostAsJsonAsync("/api/vocabs", command);
@@ -46,7 +46,7 @@ namespace JlptTrainer.Api.IntegrationTests
         [Fact]
         public async Task Delete_ShouldRemoveVocab_AndReturnNotFoundOnSubsequentGet()
         {
-            await _client.AuthenticateAsync();
+            await _client.AuthenticateAsCatalogManagerAsync(factory);
 
             var command = new CreateVocabCommand("書く", "かく", "viết", null, null, JlptLevel.N5);
             var createResponse = await _client.PostAsJsonAsync("/api/vocabs", command);
@@ -62,7 +62,7 @@ namespace JlptTrainer.Api.IntegrationTests
         [Fact]
         public async Task GetList_ShouldFilterByLevel()
         {
-            await _client.AuthenticateAsync();
+            await _client.AuthenticateAsCatalogManagerAsync(factory);
 
             await _client.PostAsJsonAsync("/api/vocabs",
                 new CreateVocabCommand("N5word", "n5reading", "n5 meaning", null, null, JlptLevel.N5));

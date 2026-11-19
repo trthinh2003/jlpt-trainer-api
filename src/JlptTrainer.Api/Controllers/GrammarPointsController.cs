@@ -4,6 +4,7 @@ using JlptTrainer.Application.GrammarPoints.Commands.ImportGrammarPointFromExcel
 using JlptTrainer.Application.GrammarPoints.Queries.GetGrammarPointById;
 using JlptTrainer.Application.GrammarPoints.Queries.GetGrammarPointImportTemplate;
 using JlptTrainer.Application.GrammarPoints.Queries.GetGrammarPointList;
+using JlptTrainer.Api.Auth;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -29,6 +30,7 @@ namespace JlptTrainer.Api.Controllers
             return Ok(result);
         }
 
+        [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
         [HttpPost]
         public async Task<ActionResult<Guid>> Create(
             CreateGrammarPointCommand command,
@@ -38,6 +40,7 @@ namespace JlptTrainer.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id }, id);
         }
 
+        [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
         {
@@ -55,6 +58,7 @@ namespace JlptTrainer.Api.Controllers
                 "grammar_point_import_template.xlsx");
         }
 
+        [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
         [HttpPost("import")]
         [RequestSizeLimit(5 * 1024 * 1024)]
         public async Task<ActionResult<ImportGrammarPointResult>> Import(IFormFile file, CancellationToken cancellationToken)

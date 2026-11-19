@@ -4,6 +4,7 @@ using JlptTrainer.Application.Kanjis.Commands.ImportKanjiFromExcel;
 using JlptTrainer.Application.Kanjis.Queries.GetKanjiById;
 using JlptTrainer.Application.Kanjis.Queries.GetKanjiImportTemplate;
 using JlptTrainer.Application.Kanjis.Queries.GetKanjiList;
+using JlptTrainer.Api.Auth;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -29,6 +30,7 @@ namespace JlptTrainer.Api.Controllers
             return Ok(result);
         }
 
+        [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
         [HttpPost]
         public async Task<ActionResult<Guid>> Create(CreateKanjiCommand command, CancellationToken cancellationToken)
         {
@@ -36,6 +38,7 @@ namespace JlptTrainer.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id }, id);
         }
 
+        [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
         {
@@ -53,6 +56,7 @@ namespace JlptTrainer.Api.Controllers
                 "kanji_import_template.xlsx");
         }
 
+        [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
         [HttpPost("import")]
         [RequestSizeLimit(5 * 1024 * 1024)]
         public async Task<ActionResult<ImportKanjiResult>> Import(IFormFile file,CancellationToken cancellationToken)

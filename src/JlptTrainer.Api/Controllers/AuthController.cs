@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using JlptTrainer.Api.Auth;
 using JlptTrainer.Application.Auth.Commands.ChangePassword;
 using JlptTrainer.Application.Auth.Commands.Login;
 using JlptTrainer.Application.Auth.Commands.Register;
@@ -27,6 +28,15 @@ namespace JlptTrainer.Api.Controllers
         {
             var result = await mediator.Send(command, cancellationToken);
             return Ok(result);
+        }
+
+        [Authorize]
+        [HttpGet("me")]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<ActionResult<AccountCapabilities>> GetCurrentAccount([FromServices] IAuthorizationService authorization)
+        {
+            var permission = await authorization.AuthorizeAsync(User, CatalogAuthorization.ManagePolicy);
+            return Ok(new AccountCapabilities(permission.Succeeded));
         }
 
         [Authorize]
@@ -59,4 +69,5 @@ namespace JlptTrainer.Api.Controllers
     }
 
     public sealed record ForgotPasswordRequest([Required, EmailAddress, StringLength(255)] string Email);
+    public sealed record AccountCapabilities(bool CanManageCatalog);
 }

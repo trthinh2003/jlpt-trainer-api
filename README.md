@@ -55,6 +55,16 @@ Run `./scripts/update-database.ps1` whenever there are new migrations. The scrip
 
 The API sends mail through Gmail SMTP over STARTTLS on port 587. For deployment, set `FrontendOrigin` to the Vue app's HTTPS origin and supply `PasswordReset__GmailAppPassword` through a secret manager as an environment variable. The API queues email in memory. If the API restarts before a message is sent, users can request a fresh link. [Gmail SMTP settings](https://support.google.com/mail/answer/7104828).
 
+## Catalog management
+
+Run `./scripts/update-database.ps1` to apply `AddUserRole` before starting the API. Existing and newly registered accounts are learners by default. Any signed-in learner can browse the catalog and manage their own review cards. A catalog manager can create, import, and delete shared vocabulary, kanji, and grammar. `GET /api/auth/me` returns `{ "canManageCatalog": true }` for managers and `false` for learners.
+
+To grant catalog management to an existing account, run the following SQL as a database administrator in the intended PostgreSQL database. Use the account's registered email. To revoke access, set `role` back to `0`.
+
+```sql
+UPDATE users SET role = 1 WHERE email = lower('manager@example.com');
+```
+
 ## Tests
 
 ```powershell

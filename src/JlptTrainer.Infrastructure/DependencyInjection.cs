@@ -6,8 +6,8 @@ using JlptTrainer.Infrastructure.PdfExport;
 using JlptTrainer.Infrastructure.Persistence;
 using JlptTrainer.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OfficeOpenXml;
 using QuestPDF.Infrastructure;
 
@@ -15,18 +15,20 @@ namespace JlptTrainer.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         QuestPDF.Settings.License = LicenseType.Community;
 
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException(
-                "Thiếu connection string 'DefaultConnection' trong appsettings.json");
+        services.AddOptions<DatabaseConnectionSettings>()
+            .BindConfiguration("ConnectionStrings")
+            .Validate(settings => !string.IsNullOrWhiteSpace(settings.DefaultConnection),
+                "Thiếu connection string 'DefaultConnection'.")
+            .ValidateOnStart();
 
-        services.AddDbContext<ApplicationDbContext>(options =>
+        services.AddDbContext<ApplicationDbContext>((provider, options) =>
             options
-                .UseNpgsql(connectionString, npgsqlOptions =>
+                .UseNpgsql(GetConnectionString(provider), npgsqlOptions =>
                     npgsqlOptions.MigrationsAssembly(
                         typeof(ApplicationDbContext).Assembly.FullName))
                 .UseSnakeCaseNamingConvention());
@@ -35,7 +37,7 @@ public static class DependencyInjection
             provider => provider.GetRequiredService<ApplicationDbContext>());
 
         // dùng chung 1 connection string cho cả EF Core (write) và Dapper (read nặng)
-        services.AddSingleton<IDapperContext>(_ => new DapperContext(connectionString));
+        services.AddSingleton<IDapperContext>(provider => new DapperContext(GetConnectionString(provider)));
 
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -74,4 +76,12 @@ public static class DependencyInjection
 
         return services;
     }
+
+    private static string GetConnectionString(IServiceProvider provider) =>
+        provider.GetRequiredService<IOptions<DatabaseConnectionSettings>>().Value.DefaultConnection;
+}
+
+internal sealed class DatabaseConnectionSettings
+{
+    public string DefaultConnection { get; set; } = string.Empty;
 }

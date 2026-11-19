@@ -321,6 +321,12 @@ namespace JlptTrainer.Infrastructure.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("password_reset_token_hash");
 
+                    b.Property<int>("Role")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("role");
+
                     b.HasKey("Id")
                         .HasName("pk_users");
 
@@ -332,7 +338,10 @@ namespace JlptTrainer.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_users_password_reset_token_hash");
 
-                    b.ToTable("users", (string)null);
+                    b.ToTable("users", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_users_valid_role", "role IN (0, 1)");
+                        });
                 });
 
             modelBuilder.Entity("JlptTrainer.Domain.Entities.Vocab", b =>

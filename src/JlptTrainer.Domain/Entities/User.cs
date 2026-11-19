@@ -1,4 +1,5 @@
 ﻿using JlptTrainer.Domain.Common;
+using JlptTrainer.Domain.Enums;
 
 namespace JlptTrainer.Domain.Entities
 {
@@ -9,6 +10,8 @@ namespace JlptTrainer.Domain.Entities
         public string PasswordHash { get; set; } = string.Empty;
 
         public int CredentialVersion { get; private set; }
+
+        public UserRole Role { get; private set; } = UserRole.Learner;
 
         public string? PasswordResetTokenHash { get; private set; }
 

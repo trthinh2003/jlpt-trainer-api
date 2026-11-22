@@ -43,6 +43,8 @@ Khi nâng cấp database đã có dữ liệu, migration `StrengthenLearningData
 
 Chạy lại `.\scripts\update-database.ps1` khi repo có migration mới. Script áp tất cả migration còn thiếu theo thứ tự, gồm `AddUserCredentialVersion` cần cho tính năng đổi mật khẩu. Nó đọc kết nối từ `ConnectionStrings__DefaultConnection` hoặc `src/JlptTrainer.Api/appsettings.Development.json` khi biến môi trường chưa được đặt. Tài khoản cũ bắt đầu ở phiên bản `0` và giữ mật khẩu hiện tại.
 
+Người học đã đăng nhập có thể gọi `POST /api/reviewcards/batch` với `cardType` (0 cho từ vựng, 1 cho Kanji, 2 cho ngữ pháp) và `referenceIds` chứa từ 1 đến 20 ID cùng loại. Phản hồi trả các ID duy nhất theo `addedIds`, `alreadyAddedIds` và `missingIds`. Gửi lại giữ lịch ôn của thẻ đã có. Route `POST /api/reviewcards/kanji/batch` vẫn nhận riêng danh sách ID Kanji qua `referenceIds`.
+
 ## Quên mật khẩu qua Gmail
 
 1. Bật xác minh hai bước cho tài khoản Gmail dùng để gửi rồi tạo App Password. [Hướng dẫn của Google](https://support.google.com/mail/answer/185833).

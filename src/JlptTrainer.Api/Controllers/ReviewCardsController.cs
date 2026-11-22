@@ -1,10 +1,13 @@
 ﻿using JlptTrainer.Application.ReviewCards.Commands.AddToReview;
+using JlptTrainer.Application.ReviewCards;
+using JlptTrainer.Application.ReviewCards.Commands.AddReviewCardsBatch;
 using JlptTrainer.Application.ReviewCards.Commands.SubmitReview;
 using JlptTrainer.Application.ReviewCards.Queries.GetDueCards;
 using JlptTrainer.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json.Serialization;
 
 namespace JlptTrainer.Api.Controllers
 {
@@ -29,6 +32,18 @@ namespace JlptTrainer.Api.Controllers
             return Ok(id);
         }
 
+        [HttpPost("batch")]
+        public async Task<ActionResult<ReviewCardAddition>> AddBatch(
+            AddReviewCardsBatchRequest request, CancellationToken cancellationToken)
+        {
+            return Ok(await mediator.Send(new AddReviewCardsBatchCommand(request.CardType, request.ReferenceIds), cancellationToken));
+        }
+
+        [HttpPost("kanji/batch")]
+        public Task<ActionResult<ReviewCardAddition>> AddKanjiBatch(
+            AddKanjiBatchRequest request, CancellationToken cancellationToken) =>
+            AddBatch(new AddReviewCardsBatchRequest(CardType.Kanji, request.ReferenceIds), cancellationToken);
+
         // gửi kết quả sau khi user lật thẻ và chọn Again/Hard/Good/Easy
         [HttpPost("{id:guid}/review")]
         public async Task<ActionResult<SubmitReviewResult>> SubmitReview(Guid id, [FromBody] SubmitReviewRequest request, CancellationToken cancellationToken = default)
@@ -39,5 +54,7 @@ namespace JlptTrainer.Api.Controllers
         }
     }
 
+    public sealed record AddReviewCardsBatchRequest([property: JsonRequired] CardType CardType, Guid[] ReferenceIds);
+    public sealed record AddKanjiBatchRequest(Guid[] ReferenceIds);
     public sealed record SubmitReviewRequest(ReviewGrade Grade, Guid? RequestId = null);
 }

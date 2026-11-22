@@ -2,60 +2,30 @@
 using JlptTrainer.Application.Common.Interfaces;
 using JlptTrainer.Application.ReviewCards.Commands.SubmitReview;
 using JlptTrainer.Domain.Entities;
-using JlptTrainer.Domain.Enums;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace JlptTrainer.Application.ReviewCards.Commands.AddToReview
 {
     public sealed class AddToReviewCommandHandler(
-       IApplicationDbContext dbContext,
        ICurrentUserService currentUser,
-       TimeProvider timeProvider)
+       TimeProvider timeProvider,
+       IReviewCardStore reviewCardStore)
        : IRequestHandler<AddToReviewCommand, Guid>
     {
         public async Task<Guid> Handle(AddToReviewCommand request, CancellationToken cancellationToken)
         {
             var userId = currentUser.UserId;
-
-            var contentExists = request.CardType switch
-            {
-                CardType.Vocab => await dbContext.Vocabs.AnyAsync(v => v.Id == request.ReferenceId, cancellationToken),
-                CardType.Kanji => await dbContext.Kanjis.AnyAsync(k => k.Id == request.ReferenceId, cancellationToken),
-                CardType.Grammar => await dbContext.GrammarPoints.AnyAsync(g => g.Id == request.ReferenceId, cancellationToken),
-                _ => throw new ArgumentOutOfRangeException(nameof(request.CardType))
-            };
-
-            if (!contentExists)
+            var initialState = SrsCalculator.InitialState(timeProvider.GetUtcNow());
+            var card = new ReviewCard(userId, request.CardType, request.ReferenceId, initialState);
+            var result = await reviewCardStore.AddMissingAsync(userId, request.CardType, [card], cancellationToken);
+            if (result.MissingIds.Count > 0)
             {
                 throw new NotFoundException(request.CardType.ToString(), request.ReferenceId);
             }
 
-            var matchingCards = dbContext.ReviewCards.Where(
-                c => c.UserId == userId && c.CardType == request.CardType && c.ReferenceId == request.ReferenceId);
-            const string duplicateMessage = "Nội dung này đã có trong bộ ôn tập của bạn rồi.";
-            if (await matchingCards.AnyAsync(cancellationToken))
+            if (result.AlreadyAddedIds.Count > 0)
             {
-                throw new ConflictException(duplicateMessage);
-            }
-
-            var now = timeProvider.GetUtcNow();
-            var initialState = SrsCalculator.InitialState(now);
-
-            var card = new ReviewCard(userId, request.CardType, request.ReferenceId, initialState);
-
-            dbContext.ReviewCards.Add(card);
-            try
-            {
-                await dbContext.SaveChangesAsync(cancellationToken);
-            }
-            catch (DbUpdateException)
-            {
-                if (await matchingCards.AnyAsync(cancellationToken))
-                {
-                    throw new ConflictException(duplicateMessage);
-                }
-                throw;
+                throw new ConflictException("Nội dung này đã có trong bộ ôn tập của bạn rồi.");
             }
 
             return card.Id;

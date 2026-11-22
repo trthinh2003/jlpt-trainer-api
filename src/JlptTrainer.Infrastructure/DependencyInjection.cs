@@ -1,4 +1,5 @@
 ﻿using JlptTrainer.Application.Common.Interfaces;
+using JlptTrainer.Application.ReviewCards;
 using JlptTrainer.Application.Vocabs;
 using JlptTrainer.Infrastructure.Auth;
 using JlptTrainer.Infrastructure.ExcelImport;
@@ -37,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<IApplicationDbContext>(
             provider => provider.GetRequiredService<ApplicationDbContext>());
         services.AddScoped<IVocabCatalogWriter, VocabCatalogWriter>();
+        services.AddScoped<IReviewCardStore, ReviewCardStore>();
 
         // dùng chung 1 connection string cho cả EF Core (write) và Dapper (read nặng)
         services.AddSingleton(provider => new DapperContext(GetConnectionString(provider)));

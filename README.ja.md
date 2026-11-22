@@ -43,6 +43,8 @@ Swagger は `https://localhost:7017/swagger` で開けます。ブラウザー�
 
 新しいマイグレーションが追加されたら `./scripts/update-database.ps1` を再実行してください。パスワード変更に必要な `AddUserCredentialVersion` を含め、未適用のマイグレーションを順に適用します。接続設定は `ConnectionStrings__DefaultConnection` から取得し、未設定の場合は `src/JlptTrainer.Api/appsettings.Development.json` のローカル設定を使用します。既存アカウントの認証情報のバージョンは `0` から始まり、現在のパスワードを引き続き使えます。
 
+ログインした学習者は `POST /api/reviewcards/batch` で `cardType`（語彙は 0、漢字は 1、文法は 2）と同じ種類の教材 ID を 1〜20 件含む `referenceIds` を送信できます。重複を除いた教材 ID は、新規追加の `addedIds`、登録済みの `alreadyAddedIds`、見つからない `missingIds` に分けて返ります。再送しても既存カードの復習予定は保持されます。`POST /api/reviewcards/kanji/batch` では従来どおり `referenceIds` に漢字 ID を指定できます。
+
 ## Gmail でパスワードを再設定
 
 1. 送信用 Gmail アカウントで 2 段階認証を有効にし、アプリ パスワードを作成します。[Google の設定ガイド](https://support.google.com/mail/answer/185833)

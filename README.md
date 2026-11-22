@@ -43,6 +43,8 @@ When upgrading an existing database, `StrengthenLearningDataConstraints` checks 
 
 Run `./scripts/update-database.ps1` whenever there are new migrations. The script applies pending migrations in order, including `AddUserCredentialVersion` for password changes. It reads the database connection from `ConnectionStrings__DefaultConnection`, falling back to `src/JlptTrainer.Api/appsettings.Development.json` for local configuration. Existing accounts start at credential version `0` and keep their passwords.
 
+Signed-in learners can send `POST /api/reviewcards/batch` with `cardType` (0 for vocabulary, 1 for Kanji, 2 for grammar) and `referenceIds`, an array of 1 to 20 IDs from that catalog. The response groups the unique reference IDs into `addedIds`, `alreadyAddedIds`, and `missingIds`. Retrying preserves the schedule of each existing card. `POST /api/reviewcards/kanji/batch` also accepts Kanji IDs with the original `referenceIds` request body.
+
 ## Password reset with Gmail
 
 1. Enable 2-Step Verification for the Gmail sender account and create an App Password. [Google's App Password guide](https://support.google.com/mail/answer/185833).

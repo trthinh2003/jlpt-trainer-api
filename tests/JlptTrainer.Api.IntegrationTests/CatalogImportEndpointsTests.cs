@@ -14,7 +14,7 @@ public sealed class CatalogImportEndpointsTests(CustomWebApplicationFactory fact
     [InlineData("vocabs", 3)]
     [InlineData("kanjis", 4)]
     [InlineData("grammarpoints", 2)]
-    public async Task Import_ValidatesRowsAndReportsPhysicalExcelRowNumbers(string catalog, int meaningColumn)
+    public async Task PreviewAndImport_ValidateRowsAndReportPhysicalExcelRowNumbers(string catalog, int meaningColumn)
     {
         using var manager = factory.CreateClient();
         await manager.AuthenticateAsCatalogManagerAsync(factory);
@@ -28,6 +28,15 @@ public sealed class CatalogImportEndpointsTests(CustomWebApplicationFactory fact
         sheet.Cells[2, 1, 2, lastColumn].Copy(sheet.Cells[9, 1, 9, lastColumn]);
         var workbook = package.GetAsByteArray();
 
+        using var preview = await UploadAsync(manager, $"{path}/preview", workbook);
+        preview.EnsureSuccessStatusCode();
+        var previewSummary = await preview.Content.ReadFromJsonAsync<PreviewSummary>();
+        Assert.NotNull(previewSummary);
+        Assert.Equal(4, previewSummary.TotalRows);
+        Assert.Equal(2, previewSummary.ReadyCount);
+        Assert.Equal(1, previewSummary.SkippedDuplicateCount);
+        Assert.Equal(7, Assert.Single(previewSummary.Errors).RowNumber);
+
         using var response = await UploadAsync(manager, path, workbook);
         response.EnsureSuccessStatusCode();
         var summary = await response.Content.ReadFromJsonAsync<ImportSummary>();
@@ -35,7 +44,15 @@ public sealed class CatalogImportEndpointsTests(CustomWebApplicationFactory fact
         Assert.Equal(4, summary.TotalRows);
         Assert.Equal(2, summary.SuccessCount);
         Assert.Equal(1, summary.SkippedDuplicateCount);
-        Assert.Equal(7, Assert.Single(summary.Errors).RowNumber);
+        Assert.Equal(previewSummary.Errors, summary.Errors);
+
+        using var secondPreview = await UploadAsync(manager, $"{path}/preview", workbook);
+        secondPreview.EnsureSuccessStatusCode();
+        var secondPreviewSummary = await secondPreview.Content.ReadFromJsonAsync<PreviewSummary>();
+        Assert.NotNull(secondPreviewSummary);
+        Assert.Equal(0, secondPreviewSummary.ReadyCount);
+        Assert.Equal(3, secondPreviewSummary.SkippedDuplicateCount);
+        Assert.Equal(summary.Errors, secondPreviewSummary.Errors);
 
         using var replay = await UploadAsync(manager, path, workbook);
         replay.EnsureSuccessStatusCode();
@@ -46,15 +63,52 @@ public sealed class CatalogImportEndpointsTests(CustomWebApplicationFactory fact
         Assert.Equal(7, Assert.Single(replaySummary.Errors).RowNumber);
     }
 
-    [Fact]
-    public async Task Import_InvalidWorkbook_ReturnsReadableBadRequest()
+    [Theory]
+    [InlineData("/api/vocabs/import")]
+    [InlineData("/api/vocabs/import/preview")]
+    public async Task Upload_InvalidWorkbook_ReturnsReadableBadRequest(string path)
     {
         using var manager = factory.CreateClient();
         await manager.AuthenticateAsCatalogManagerAsync(factory);
-        using var response = await UploadAsync(manager, "/api/vocabs/import", "not an Excel workbook"u8.ToArray());
+        using var response = await UploadAsync(manager, path, "not an Excel workbook"u8.ToArray());
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var error = await response.Content.ReadFromJsonAsync<ImportError>();
         Assert.Contains(".xlsx", error!.Error);
+    }
+
+    [Fact]
+    public async Task VocabImport_RechecksBothPartsOfTheKeyAfterPreview()
+    {
+        using var manager = factory.CreateClient();
+        await manager.AuthenticateAsCatalogManagerAsync(factory);
+        const string catalog = "/api/vocabs";
+        var direct = new CreateVocabCommand("精査", "せいさ", "nghĩa có sẵn", null, null, JlptLevel.N1);
+
+        using var existing = await manager.PostAsJsonAsync(catalog, direct);
+        Assert.Equal(HttpStatusCode.Created, existing.StatusCode);
+        var template = await manager.GetByteArrayAsync($"{catalog}/import/template");
+        using var package = new ExcelPackage(new MemoryStream(template));
+        var sheet = package.Workbook.Worksheets[0];
+        sheet.Cells[2, 1].Value = sheet.Cells[3, 1].Value = direct.Word;
+        sheet.Cells[2, 2].Value = direct.Reading;
+        const string newReading = "せいさべつ";
+        sheet.Cells[3, 2].Value = newReading;
+        var workbook = package.GetAsByteArray();
+
+        using var preview = await UploadAsync(manager, $"{catalog}/import/preview", workbook);
+        preview.EnsureSuccessStatusCode();
+        var previewSummary = (await preview.Content.ReadFromJsonAsync<PreviewSummary>())!;
+        Assert.Equal(1, previewSummary.ReadyCount);
+        Assert.Equal(1, previewSummary.SkippedDuplicateCount);
+
+        using var created = await manager.PostAsJsonAsync(catalog, direct with { Reading = newReading });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        using var imported = await UploadAsync(manager, $"{catalog}/import", workbook);
+        imported.EnsureSuccessStatusCode();
+        var importSummary = (await imported.Content.ReadFromJsonAsync<ImportSummary>())!;
+        Assert.Equal(0, importSummary.SuccessCount);
+        Assert.Equal(2, importSummary.SkippedDuplicateCount);
+        Assert.Empty(importSummary.Errors);
     }
 
     [Fact]
@@ -112,6 +166,7 @@ public sealed class CatalogImportEndpointsTests(CustomWebApplicationFactory fact
     }
 
     public sealed record ImportSummary(int TotalRows, int SuccessCount, int SkippedDuplicateCount, List<RowError> Errors);
+    public sealed record PreviewSummary(int TotalRows, int ReadyCount, int SkippedDuplicateCount, List<RowError> Errors);
     public sealed record RowError(int RowNumber, string Message);
     public sealed record ImportError(string Error);
 }

@@ -69,6 +69,8 @@ Run `./scripts/update-database.ps1` to apply `AddUserRole` before starting the A
 
 `GET /api/kanjis` also accepts `search` to match the character, On or Kun readings, or meaning. `GET /api/grammarpoints` matches the pattern or meaning. Catalog managers can call `PUT /api/kanjis/{id}/content` with `meaning`, `onYomi`, and `kunYomi`, or `PUT /api/grammarpoints/{id}/content` with `meaning`, `exampleSentence`, and `exampleSentenceMeaning`. Both return `204` on success and update the content shown on existing review cards.
 
+In Vue, open **Import Excel**, select a workbook, and preview it before confirming. For vocabulary, kanji, and grammar, catalog managers can send the same multipart `file` to `POST /api/{catalog}/import/preview` to get `totalRows`, `readyCount`, `skippedDuplicateCount`, and `errors` with Excel row numbers. The preview leaves the catalog unchanged. `POST /api/{catalog}/import` checks the workbook against the current catalog, writes valid new rows, and reports the actual `successCount`.
+
 Apply `EnforceUniqueVocabKeys` with `./scripts/update-database.ps1` before using vocabulary creation and import. Review any existing duplicate word and reading pairs and their review card and quiz links before applying the migration. Creating a duplicate returns `409`. Excel import counts duplicate rows as skipped.
 
 After reviewing duplicate pairs, back up the database and stop the API. Run `./scripts/update-database.ps1 -MergeIdenticalVocabs` to merge identical entries and create the index in one transaction. Differences in meaning, examples or level require manual review. If a learner has multiple cards for the same word, the most recently reviewed card takes precedence.

@@ -6,6 +6,7 @@ using JlptTrainer.Application.GrammarPoints.Queries.GetGrammarPointById;
 using JlptTrainer.Application.GrammarPoints.Queries.GetGrammarPointImportTemplate;
 using JlptTrainer.Application.GrammarPoints.Queries.GetGrammarPointList;
 using JlptTrainer.Api.Auth;
+using JlptTrainer.Api.ExcelImport;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -71,21 +72,17 @@ namespace JlptTrainer.Api.Controllers
 
         [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
         [HttpPost("import")]
-        [RequestSizeLimit(5 * 1024 * 1024 + 64 * 1024)]
-        public async Task<ActionResult<ImportGrammarPointResult>> Import(IFormFile file, CancellationToken cancellationToken)
-        {
-            if (file.Length == 0)
-            {
-                return BadRequest(new { error = "File không được để trống." });
-            }
+        [RequestSizeLimit(CatalogExcelUpload.RequestSizeLimit)]
+        public Task<ActionResult<CatalogImportResponse>> Import(IFormFile file, CancellationToken cancellationToken) =>
+            CatalogExcelUpload.HandleAsync(file, mediator, content => new ImportGrammarPointFromExcelCommand(content),
+                CatalogImportResponse.From, cancellationToken);
 
-            using var memoryStream = new MemoryStream();
-            await file.CopyToAsync(memoryStream, cancellationToken);
-
-            var result = await mediator.Send(new ImportGrammarPointFromExcelCommand(memoryStream.ToArray()), cancellationToken);
-
-            return Ok(result);
-        }
+        [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
+        [HttpPost("import/preview")]
+        [RequestSizeLimit(CatalogExcelUpload.RequestSizeLimit)]
+        public Task<ActionResult<CatalogImportPreviewResponse>> PreviewImport(IFormFile file, CancellationToken cancellationToken) =>
+            CatalogExcelUpload.HandleAsync(file, mediator, content => new ImportGrammarPointFromExcelCommand(content, PreviewOnly: true),
+                CatalogImportPreviewResponse.From, cancellationToken);
 
         public sealed record UpdateGrammarPointContentRequest(string Meaning,
             string? ExampleSentence, string? ExampleSentenceMeaning);

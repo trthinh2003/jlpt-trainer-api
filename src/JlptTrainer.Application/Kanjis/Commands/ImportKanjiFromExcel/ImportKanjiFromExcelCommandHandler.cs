@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using JlptTrainer.Application.Common.ExcelImport;
 using JlptTrainer.Application.Common.Helpers;
 using JlptTrainer.Application.Common.Interfaces;
 using JlptTrainer.Application.Kanjis.Commands.CreateKanji;
@@ -11,15 +12,15 @@ namespace JlptTrainer.Application.Kanjis.Commands.ImportKanjiFromExcel;
 public sealed class ImportKanjiFromExcelCommandHandler(
     IApplicationDbContext dbContext,
     IExcelReader excelReader,
-    IValidator<CreateKanjiCommand> validator) : IRequestHandler<ImportKanjiFromExcelCommand, ImportKanjiResult>
+    IValidator<CreateKanjiCommand> validator) : IRequestHandler<ImportKanjiFromExcelCommand, CatalogImportResult>
 {
-    public async Task<ImportKanjiResult> Handle(ImportKanjiFromExcelCommand request, CancellationToken cancellationToken)
+    public async Task<CatalogImportResult> Handle(ImportKanjiFromExcelCommand request, CancellationToken cancellationToken)
     {
         using var stream = new MemoryStream(request.FileContent);
         var rows = excelReader.ReadSheet(stream);
         var keys = await dbContext.Kanjis.Select(item => item.Character).ToListAsync(cancellationToken);
         var knownKeys = keys.ToHashSet();
-        var errors = new List<ImportKanjiRowError>();
+        var errors = new List<CatalogImportRowError>();
         var imported = new List<Kanji>();
         var duplicates = 0;
 
@@ -28,13 +29,13 @@ public sealed class ImportKanjiFromExcelCommandHandler(
             var levelCell = row.Get("Level");
             if (!JlptLevelParser.TryParse(levelCell, out var level))
             {
-                errors.Add(new ImportKanjiRowError(row.Number, $"Level \"{levelCell}\" không hợp lệ (chấp nhận N1-N5 hoặc 1-5)."));
+                errors.Add(new CatalogImportRowError(row.Number, $"Level \"{levelCell}\" không hợp lệ (chấp nhận N1-N5 hoặc 1-5)."));
                 continue;
             }
 
             if (!int.TryParse(row.Get("StrokeCount"), out var strokeCount))
             {
-                errors.Add(new ImportKanjiRowError(row.Number, "StrokeCount phải là số nguyên."));
+                errors.Add(new CatalogImportRowError(row.Number, "StrokeCount phải là số nguyên."));
                 continue;
             }
 
@@ -43,7 +44,7 @@ public sealed class ImportKanjiFromExcelCommandHandler(
             var validation = await validator.ValidateAsync(input, cancellationToken);
             if (!validation.IsValid)
             {
-                errors.Add(new ImportKanjiRowError(row.Number,
+                errors.Add(new CatalogImportRowError(row.Number,
                     string.Join(" · ", validation.Errors.Select(error => error.ErrorMessage))));
                 continue;
             }
@@ -65,12 +66,12 @@ public sealed class ImportKanjiFromExcelCommandHandler(
             });
         }
 
-        if (imported.Count > 0)
+        if (!request.PreviewOnly && imported.Count > 0)
         {
             dbContext.Kanjis.AddRange(imported);
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        return new ImportKanjiResult(rows.Count, imported.Count, duplicates, errors);
+        return new CatalogImportResult(rows.Count, imported.Count, duplicates, errors);
     }
 }

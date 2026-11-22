@@ -69,6 +69,8 @@ API の起動前に `./scripts/update-database.ps1` を実行し、`AddUserRole`
 
 `GET /api/kanjis` の `search` は漢字、音読み、訓読み、意味を検索し、`GET /api/grammarpoints` では文型と意味を検索します。教材管理者は `PUT /api/kanjis/{id}/content` で `meaning`、`onYomi`、`kunYomi` を更新できます。`PUT /api/grammarpoints/{id}/content` では `meaning`、`exampleSentence`、`exampleSentenceMeaning` を更新できます。成功時は `204` が返り、既存の復習カードにも更新が反映されます。
 
+Vue では Excel ファイルを選び、プレビューで結果を確認してからインポートを確定します。語彙・漢字・文法の教材管理者は、`POST /api/{catalog}/import/preview` に multipart の `file` を送信できます。レスポンスには `totalRows`、`readyCount`、`skippedDuplicateCount`、Excel の行番号付きの `errors` が含まれます。プレビューでは教材を保存しません。`POST /api/{catalog}/import` は最新の教材データを使ってファイルを再検証し、有効な新規行を保存して、実際の保存件数を `successCount` で返します。
+
 語彙の追加やインポートを使う前に `./scripts/update-database.ps1` で `EnforceUniqueVocabKeys` を適用してください。表記と読みが重複する既存語彙がある場合は、関連する復習カードやクイズの参照を含めて確認してから適用します。重複する語彙の追加は `409` を返し、Excel インポートでは該当行をスキップ件数に含めます。
 
 重複を確認した後、データベースをバックアップして API を停止します。`./scripts/update-database.ps1 -MergeIdenticalVocabs` を実行すると、内容が一致する語彙の統合とインデックスの作成が同じトランザクションで行われます。意味、例文、例文の訳、レベルが異なる項目は個別に確認してください。同じ学習者のカードが重複する場合は、最後に復習したカードのスケジュールを採用します。

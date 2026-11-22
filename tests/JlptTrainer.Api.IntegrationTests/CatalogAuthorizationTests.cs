@@ -16,7 +16,7 @@ public sealed class CatalogAuthorizationTests(CustomWebApplicationFactory factor
     [InlineData(CardType.Vocab)]
     [InlineData(CardType.Kanji)]
     [InlineData(CardType.Grammar)]
-    public async Task CatalogWrites_RequireManagerForCreateImportAndDelete(CardType cardType)
+    public async Task CatalogManagement_RequiresManagerForCreateImportPreviewImportAndDelete(CardType cardType)
     {
         var (path, command) = CatalogEntry(cardType);
         using var guest = factory.CreateClient();
@@ -34,9 +34,11 @@ public sealed class CatalogAuthorizationTests(CustomWebApplicationFactory factor
         Assert.Equal(HttpStatusCode.OK, (await learner.GetAsync(detailsPath)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await guest.PostAsJsonAsync(path, command)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await ImportAsync(guest, path, workbook)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await ImportAsync(guest, path, workbook, preview: true)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await guest.DeleteAsync(detailsPath)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await learner.PostAsJsonAsync(path, command)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await ImportAsync(learner, path, workbook)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await ImportAsync(learner, path, workbook, preview: true)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await learner.DeleteAsync(detailsPath)).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await learner.GetAsync(detailsPath)).StatusCode);
 
@@ -98,11 +100,11 @@ public sealed class CatalogAuthorizationTests(CustomWebApplicationFactory factor
         _ => throw new ArgumentOutOfRangeException(nameof(cardType))
     };
 
-    private static async Task<HttpResponseMessage> ImportAsync(HttpClient client, string path, byte[] workbook)
+    private static async Task<HttpResponseMessage> ImportAsync(HttpClient client, string path, byte[] workbook, bool preview = false)
     {
         using var form = new MultipartFormDataContent();
         form.Add(new ByteArrayContent(workbook), "file", "catalog.xlsx");
-        return await client.PostAsync($"{path}/import", form);
+        return await client.PostAsync(preview ? $"{path}/import/preview" : $"{path}/import", form);
     }
 
     public sealed record ImportOutcome(int SuccessCount);

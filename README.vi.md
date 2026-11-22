@@ -69,6 +69,8 @@ Chạy `./scripts/update-database.ps1` để áp `AddUserRole` trước khi kh�
 
 `GET /api/kanjis` cũng nhận `search` để tìm theo chữ, âm On, âm Kun hoặc nghĩa. `GET /api/grammarpoints` tìm theo mẫu câu hoặc nghĩa. Quản lý kho gọi `PUT /api/kanjis/{id}/content` với `meaning`, `onYomi`, `kunYomi`, hoặc `PUT /api/grammarpoints/{id}/content` với `meaning`, `exampleSentence`, `exampleSentenceMeaning`. Cả hai trả `204` khi lưu và cập nhật nội dung cho các thẻ ôn đã có.
 
+Trong Vue, mở **Nhập Excel**, chọn file rồi bấm **Xem trước** trước khi xác nhận. Với Từ vựng, Kanji và Ngữ pháp, quản lý kho gửi multipart `file` đến `POST /api/{catalog}/import/preview` để nhận `totalRows`, `readyCount`, `skippedDuplicateCount` và `errors` kèm số dòng Excel. Xem trước giữ nguyên dữ liệu trong kho. `POST /api/{catalog}/import` kiểm tra lại file theo dữ liệu hiện tại, ghi các dòng mới hợp lệ và trả số dòng đã ghi qua `successCount`.
+
 Chạy `./scripts/update-database.ps1` để áp `EnforceUniqueVocabKeys` trước khi dùng chức năng thêm và nhập từ vựng. Kiểm tra các cặp từ và cách đọc đang trùng cùng liên kết thẻ ôn và bài luyện trước khi áp migration. Tạo tay gặp cặp đã có trả `409`. Import Excel tính các dòng trùng vào số dòng bỏ qua.
 
 Sau khi đã duyệt các cặp trùng, sao lưu database và dừng API. Chạy `./scripts/update-database.ps1 -MergeIdenticalVocabs` để gộp các bản giống hệt và tạo index trong cùng giao dịch. Các bản khác nghĩa, ví dụ hoặc cấp độ cần xử lý thủ công. Nếu một người học có hai thẻ cho cùng từ, migration giữ lịch ôn gần nhất.

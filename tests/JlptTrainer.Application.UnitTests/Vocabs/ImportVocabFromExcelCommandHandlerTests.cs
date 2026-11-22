@@ -14,7 +14,7 @@ namespace JlptTrainer.Application.UnitTests.Vocabs
         private readonly IVocabCatalogWriter _writer = Substitute.For<IVocabCatalogWriter>();
 
         private ImportVocabFromExcelCommandHandler CreateHandler() =>
-            new(_writer, _excelReader, new CreateVocabCommandValidator());
+            new(_writer, Substitute.For<IApplicationDbContext>(), _excelReader, new CreateVocabCommandValidator());
 
         [Fact]
         public async Task Handle_WithValidRows_ShouldImportAllVocabs()
@@ -31,7 +31,7 @@ namespace JlptTrainer.Application.UnitTests.Vocabs
             var handler = CreateHandler();
             var result = await handler.Handle(new ImportVocabFromExcelCommand([1, 2, 3]), CancellationToken.None);
 
-            result.SuccessCount.Should().Be(2);
+            result.AcceptedCount.Should().Be(2);
             result.Errors.Should().BeEmpty();
             await _writer.Received(1).InsertMissingAsync(
                 Arg.Is<IReadOnlyList<Vocab>>(vocabs => vocabs != null && vocabs.Count == 2 &&
@@ -51,7 +51,7 @@ namespace JlptTrainer.Application.UnitTests.Vocabs
             var handler = CreateHandler();
             var result = await handler.Handle(new ImportVocabFromExcelCommand([1]), CancellationToken.None);
 
-            result.SuccessCount.Should().Be(0);
+            result.AcceptedCount.Should().Be(0);
             result.Errors.Should().ContainSingle();
             result.Errors[0].RowNumber.Should().Be(4);
         }
@@ -69,7 +69,7 @@ namespace JlptTrainer.Application.UnitTests.Vocabs
             var handler = CreateHandler();
             var result = await handler.Handle(new ImportVocabFromExcelCommand([1]), CancellationToken.None);
 
-            result.SuccessCount.Should().Be(0);
+            result.AcceptedCount.Should().Be(0);
             result.SkippedDuplicateCount.Should().Be(1);
             await _writer.Received(1).InsertMissingAsync(
                 Arg.Is<IReadOnlyList<Vocab>>(vocabs => vocabs != null && vocabs.Count == 1 && vocabs[0].Word == "食べる"), CancellationToken.None);
@@ -90,7 +90,7 @@ namespace JlptTrainer.Application.UnitTests.Vocabs
             var handler = CreateHandler();
             var result = await handler.Handle(new ImportVocabFromExcelCommand([1]), CancellationToken.None);
 
-            result.SuccessCount.Should().Be(1);
+            result.AcceptedCount.Should().Be(1);
             result.SkippedDuplicateCount.Should().Be(1);
             await _writer.Received(1).InsertMissingAsync(
                 Arg.Is<IReadOnlyList<Vocab>>(vocabs => vocabs != null && vocabs.Count == 1 && vocabs[0].Meaning == "nói"), CancellationToken.None);

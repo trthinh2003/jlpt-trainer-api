@@ -6,6 +6,7 @@ using JlptTrainer.Application.Kanjis.Queries.GetKanjiById;
 using JlptTrainer.Application.Kanjis.Queries.GetKanjiImportTemplate;
 using JlptTrainer.Application.Kanjis.Queries.GetKanjiList;
 using JlptTrainer.Api.Auth;
+using JlptTrainer.Api.ExcelImport;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -69,23 +70,17 @@ namespace JlptTrainer.Api.Controllers
 
         [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
         [HttpPost("import")]
-        [RequestSizeLimit(5 * 1024 * 1024 + 64 * 1024)]
-        public async Task<ActionResult<ImportKanjiResult>> Import(IFormFile file,CancellationToken cancellationToken)
-        {
-            if (file.Length == 0)
-            {
-                return BadRequest(new { error = "File không được để trống." });
-            }
+        [RequestSizeLimit(CatalogExcelUpload.RequestSizeLimit)]
+        public Task<ActionResult<CatalogImportResponse>> Import(IFormFile file, CancellationToken cancellationToken) =>
+            CatalogExcelUpload.HandleAsync(file, mediator, content => new ImportKanjiFromExcelCommand(content),
+                CatalogImportResponse.From, cancellationToken);
 
-            using var memoryStream = new MemoryStream();
-            await file.CopyToAsync(memoryStream, cancellationToken);
-
-            var result = await mediator.Send(
-                new ImportKanjiFromExcelCommand(memoryStream.ToArray()),
-                cancellationToken);
-
-            return Ok(result);
-        }
+        [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
+        [HttpPost("import/preview")]
+        [RequestSizeLimit(CatalogExcelUpload.RequestSizeLimit)]
+        public Task<ActionResult<CatalogImportPreviewResponse>> PreviewImport(IFormFile file, CancellationToken cancellationToken) =>
+            CatalogExcelUpload.HandleAsync(file, mediator, content => new ImportKanjiFromExcelCommand(content, PreviewOnly: true),
+                CatalogImportPreviewResponse.From, cancellationToken);
 
         public sealed record UpdateKanjiContentRequest(string Meaning,
             string? OnYomi, string? KunYomi);

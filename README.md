@@ -65,6 +65,14 @@ The API sends mail through Gmail SMTP over STARTTLS on port 587. For deployment,
 
 Run `./scripts/update-database.ps1` to apply `AddUserRole` before starting the API. Existing and newly registered accounts are learners by default. Any signed-in learner can browse the catalog and manage their own review cards. A catalog manager can create, import, and delete shared vocabulary, kanji, and grammar. `GET /api/auth/me` returns `{ "canManageCatalog": true }` for managers and `false` for learners.
 
+`GET /api/vocabs` accepts an optional `search` of up to 100 characters to match part of the word or reading. Combine it with `level`, `pageNumber`, and `pageSize`. Catalog managers can update a word's meaning and examples through `PUT /api/vocabs/{id}/content` with `meaning`, `exampleSentence`, and `exampleSentenceMeaning`. Send `null` to clear an example field. Success returns `204`. The word's ID and existing review cards are preserved.
+
+`GET /api/kanjis` also accepts `search` to match the character, On or Kun readings, or meaning. `GET /api/grammarpoints` matches the pattern or meaning. Catalog managers can call `PUT /api/kanjis/{id}/content` with `meaning`, `onYomi`, and `kunYomi`, or `PUT /api/grammarpoints/{id}/content` with `meaning`, `exampleSentence`, and `exampleSentenceMeaning`. Both return `204` on success and update the content shown on existing review cards.
+
+Apply `EnforceUniqueVocabKeys` with `./scripts/update-database.ps1` before using vocabulary creation and import. Review any existing duplicate word and reading pairs and their review card and quiz links before applying the migration. Creating a duplicate returns `409`. Excel import counts duplicate rows as skipped.
+
+After reviewing duplicate pairs, back up the database and stop the API. Run `./scripts/update-database.ps1 -MergeIdenticalVocabs` to merge identical entries and create the index in one transaction. Differences in meaning, examples or level require manual review. If a learner has multiple cards for the same word, the most recently reviewed card takes precedence.
+
 To grant catalog management to an existing account, run the following SQL as a database administrator in the intended PostgreSQL database. Use the account's registered email. To revoke access, set `role` back to `0`.
 
 ```sql

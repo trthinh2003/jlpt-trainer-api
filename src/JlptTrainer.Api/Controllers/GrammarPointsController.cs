@@ -1,6 +1,7 @@
 ﻿using JlptTrainer.Application.GrammarPoints.Commands.CreateGrammarPoint;
 using JlptTrainer.Application.GrammarPoints.Commands.DeleteGrammarPoint;
 using JlptTrainer.Application.GrammarPoints.Commands.ImportGrammarPointFromExcel;
+using JlptTrainer.Application.GrammarPoints.Commands.UpdateGrammarPointContent;
 using JlptTrainer.Application.GrammarPoints.Queries.GetGrammarPointById;
 using JlptTrainer.Application.GrammarPoints.Queries.GetGrammarPointImportTemplate;
 using JlptTrainer.Application.GrammarPoints.Queries.GetGrammarPointList;
@@ -41,6 +42,16 @@ namespace JlptTrainer.Api.Controllers
         }
 
         [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
+        [HttpPut("{id:guid}/content")]
+        public async Task<IActionResult> UpdateContent(Guid id, UpdateGrammarPointContentRequest request,
+            CancellationToken cancellationToken)
+        {
+            await mediator.Send(new UpdateGrammarPointContentCommand(id, request.Meaning,
+                request.ExampleSentence, request.ExampleSentenceMeaning), cancellationToken);
+            return NoContent();
+        }
+
+        [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
         {
@@ -75,5 +86,8 @@ namespace JlptTrainer.Api.Controllers
 
             return Ok(result);
         }
+
+        public sealed record UpdateGrammarPointContentRequest(string Meaning,
+            string? ExampleSentence, string? ExampleSentenceMeaning);
     }
 }

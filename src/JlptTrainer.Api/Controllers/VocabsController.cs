@@ -1,5 +1,6 @@
 ﻿using JlptTrainer.Application.Vocabs.Commands.CreateVocab;
 using JlptTrainer.Application.Vocabs.Commands.DeleteVocab;
+using JlptTrainer.Application.Vocabs.Commands.UpdateVocabContent;
 using JlptTrainer.Application.Vocabs.ImportVocabFromExcel;
 using JlptTrainer.Application.Vocabs.Queries.GetVocabById;
 using JlptTrainer.Application.Vocabs.Queries.GetVocabImportTemplate;
@@ -48,6 +49,15 @@ namespace JlptTrainer.Api.Controllers
         }
 
         [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
+        [HttpPut("{id:guid}/content")]
+        public async Task<IActionResult> UpdateContent(Guid id, UpdateVocabContentRequest request, CancellationToken cancellationToken)
+        {
+            await mediator.Send(new UpdateVocabContentCommand(id, request.Meaning,
+                request.ExampleSentence, request.ExampleSentenceMeaning), cancellationToken);
+            return NoContent();
+        }
+
+        [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
         {
@@ -87,5 +97,7 @@ namespace JlptTrainer.Api.Controllers
 
             return Ok(result);
         }
+
+        public sealed record UpdateVocabContentRequest(string Meaning, string? ExampleSentence, string? ExampleSentenceMeaning);
     }
 }

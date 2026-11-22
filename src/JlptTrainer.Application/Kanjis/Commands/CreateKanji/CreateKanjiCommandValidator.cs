@@ -1,5 +1,7 @@
 ﻿using FluentValidation;
 
+using JlptTrainer.Application.Common.Validation;
+
 namespace JlptTrainer.Application.Kanjis.Commands.CreateKanji
 {
     public sealed class CreateKanjiCommandValidator : AbstractValidator<CreateKanjiCommand>
@@ -7,7 +9,7 @@ namespace JlptTrainer.Application.Kanjis.Commands.CreateKanji
         public CreateKanjiCommandValidator()
         {
             RuleFor(x => x.Character).NotEmpty().MaximumLength(10);
-            RuleFor(x => x.Meaning).NotEmpty().MaximumLength(500);
+            RuleFor(x => x.Meaning).ValidMeaning();
             RuleFor(x => x.StrokeCount).GreaterThan(0).WithMessage("Số nét phải lớn hơn 0.");
             RuleFor(x => x.Level).IsInEnum();         
             

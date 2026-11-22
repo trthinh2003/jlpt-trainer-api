@@ -1,5 +1,7 @@
 ﻿using FluentValidation;
 
+using JlptTrainer.Application.Common.Validation;
+
 namespace JlptTrainer.Application.GrammarPoints.Commands.CreateGrammarPoint
 {
     public sealed class CreateGrammarPointCommandValidator : AbstractValidator<CreateGrammarPointCommand>
@@ -7,7 +9,7 @@ namespace JlptTrainer.Application.GrammarPoints.Commands.CreateGrammarPoint
         public CreateGrammarPointCommandValidator()
         {
             RuleFor(x => x.Pattern).NotEmpty().MaximumLength(200);
-            RuleFor(x => x.Meaning).NotEmpty().MaximumLength(500);
+            RuleFor(x => x.Meaning).ValidMeaning();
             RuleFor(x => x.Level).IsInEnum();
         }
     }

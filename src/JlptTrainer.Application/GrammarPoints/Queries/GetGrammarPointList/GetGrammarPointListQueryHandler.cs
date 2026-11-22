@@ -15,11 +15,24 @@ namespace JlptTrainer.Application.GrammarPoints.Queries.GetGrammarPointList
                 query = query.Where(g => g.Level == request.Level);
             }
 
+            var search = request.Search?.Trim().ToLowerInvariant();
+            if (!string.IsNullOrEmpty(search))
+            {
+                query = query.Where(g => g.Pattern.ToLower().Contains(search)
+                    || g.Meaning.ToLower().Contains(search));
+            }
+
             var totalCount = await query.CountAsync(cancellationToken);
+            var offset = (request.PageNumber - 1L) * request.PageSize;
+            if (offset >= totalCount)
+            {
+                return new PagedGrammarPointResult([], totalCount, request.PageNumber, request.PageSize);
+            }
 
             var items = await query
                 .OrderBy(g => g.Pattern)
-                .Skip((request.PageNumber - 1) * request.PageSize)
+                .ThenBy(g => g.Id)
+                .Skip((int)offset)
                 .Take(request.PageSize)
                 .Select(g => new GrammarPointDto(g.Id, g.Pattern, g.Meaning, g.ExampleSentence, g.ExampleSentenceMeaning, g.Level))
                 .ToListAsync(cancellationToken);

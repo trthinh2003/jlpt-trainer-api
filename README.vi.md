@@ -65,6 +65,14 @@ Backend dùng Gmail SMTP qua STARTTLS ở cổng 587. Khi triển khai, đặt `
 
 Chạy `./scripts/update-database.ps1` để áp `AddUserRole` trước khi khởi động API. Tài khoản có sẵn và tài khoản mới mặc định là người học. Mọi tài khoản đã đăng nhập có thể xem kho và quản lý bộ ôn cá nhân. Quản lý kho được tạo, nhập và xóa từ vựng, kanji và ngữ pháp dùng chung. `GET /api/auth/me` trả `{ "canManageCatalog": true }` cho quản lý kho và `false` cho người học.
 
+`GET /api/vocabs` nhận `search` tối đa 100 ký tự để tìm theo một phần của từ hoặc cách đọc. Có thể kết hợp `level`, `pageNumber` và `pageSize`. Quản lý kho gọi `PUT /api/vocabs/{id}/content` với `meaning`, `exampleSentence` và `exampleSentenceMeaning` để sửa nghĩa và ví dụ. Gửi `null` để xóa nội dung một ô ví dụ. API trả `204` khi lưu thành công và giữ nguyên ID từ cùng các thẻ ôn đã có.
+
+`GET /api/kanjis` cũng nhận `search` để tìm theo chữ, âm On, âm Kun hoặc nghĩa. `GET /api/grammarpoints` tìm theo mẫu câu hoặc nghĩa. Quản lý kho gọi `PUT /api/kanjis/{id}/content` với `meaning`, `onYomi`, `kunYomi`, hoặc `PUT /api/grammarpoints/{id}/content` với `meaning`, `exampleSentence`, `exampleSentenceMeaning`. Cả hai trả `204` khi lưu và cập nhật nội dung cho các thẻ ôn đã có.
+
+Chạy `./scripts/update-database.ps1` để áp `EnforceUniqueVocabKeys` trước khi dùng chức năng thêm và nhập từ vựng. Kiểm tra các cặp từ và cách đọc đang trùng cùng liên kết thẻ ôn và bài luyện trước khi áp migration. Tạo tay gặp cặp đã có trả `409`. Import Excel tính các dòng trùng vào số dòng bỏ qua.
+
+Sau khi đã duyệt các cặp trùng, sao lưu database và dừng API. Chạy `./scripts/update-database.ps1 -MergeIdenticalVocabs` để gộp các bản giống hệt và tạo index trong cùng giao dịch. Các bản khác nghĩa, ví dụ hoặc cấp độ cần xử lý thủ công. Nếu một người học có hai thẻ cho cùng từ, migration giữ lịch ôn gần nhất.
+
 Để cấp quyền cho tài khoản đã đăng ký, chạy SQL sau bằng tài khoản quản trị trên đúng database PostgreSQL. Dùng email của tài khoản cần cấp quyền. Để thu hồi, đặt lại `role` về `0`.
 
 ```sql

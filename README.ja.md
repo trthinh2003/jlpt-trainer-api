@@ -65,6 +65,14 @@ API は Gmail の SMTP サーバーにポート 587 の STARTTLS で接続しま
 
 API の起動前に `./scripts/update-database.ps1` を実行し、`AddUserRole` を適用します。既存のアカウントと新規登録アカウントには、既定で学習者の権限が割り当てられます。ログインしたユーザーは教材を閲覧し、自分の復習カードを管理できます。教材管理者は、共有の語彙・漢字・文法の追加、インポート、削除を行えます。`GET /api/auth/me` は教材管理者には `{ "canManageCatalog": true }`、学習者には `false` を返します。
 
+`GET /api/vocabs` では、最大100文字の `search` を指定して、表記や読みを部分一致で検索できます。`level`、`pageNumber`、`pageSize` も併用できます。教材管理者は `PUT /api/vocabs/{id}/content` で `meaning`、`exampleSentence`、`exampleSentenceMeaning` を更新できます。例文や訳文を消すには `null` を送ります。更新に成功すると `204` が返り、語彙の ID と既存の復習カードは保持されます。
+
+`GET /api/kanjis` の `search` は漢字、音読み、訓読み、意味を検索し、`GET /api/grammarpoints` では文型と意味を検索します。教材管理者は `PUT /api/kanjis/{id}/content` で `meaning`、`onYomi`、`kunYomi` を更新できます。`PUT /api/grammarpoints/{id}/content` では `meaning`、`exampleSentence`、`exampleSentenceMeaning` を更新できます。成功時は `204` が返り、既存の復習カードにも更新が反映されます。
+
+語彙の追加やインポートを使う前に `./scripts/update-database.ps1` で `EnforceUniqueVocabKeys` を適用してください。表記と読みが重複する既存語彙がある場合は、関連する復習カードやクイズの参照を含めて確認してから適用します。重複する語彙の追加は `409` を返し、Excel インポートでは該当行をスキップ件数に含めます。
+
+重複を確認した後、データベースをバックアップして API を停止します。`./scripts/update-database.ps1 -MergeIdenticalVocabs` を実行すると、内容が一致する語彙の統合とインデックスの作成が同じトランザクションで行われます。意味、例文、例文の訳、レベルが異なる項目は個別に確認してください。同じ学習者のカードが重複する場合は、最後に復習したカードのスケジュールを採用します。
+
 既存のアカウントに教材管理の権限を付与するには、対象の PostgreSQL データベースで、データベース管理者として以下の SQL を実行します。メールアドレスは対象アカウントの登録アドレスに置き換えてください。権限を取り消すには `role` を `0` に戻します。
 
 ```sql

@@ -140,7 +140,7 @@ public sealed class MockTestAttemptEndpointsTests(ClockWebApplicationFactory fac
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var vocab = meanings.Select((meaning, index) => new Vocab
         {
-            Level = level, Word = $"語{index}", Reading = $"ご{index}", Meaning = meaning,
+            Level = level, Word = $"{level}語{index}", Reading = $"ご{index}", Meaning = meaning,
         }).ToArray();
         db.Vocabs.AddRange(vocab);
         await db.SaveChangesAsync();

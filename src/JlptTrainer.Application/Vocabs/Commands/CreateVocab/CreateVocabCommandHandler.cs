@@ -1,10 +1,10 @@
-﻿using JlptTrainer.Application.Common.Interfaces;
+﻿using JlptTrainer.Application.Common.Exceptions;
 using JlptTrainer.Domain.Entities;
 using MediatR;
 
 namespace JlptTrainer.Application.Vocabs.Commands.CreateVocab
 {
-    public sealed class CreateVocabCommandHandler(IApplicationDbContext dbContext) : IRequestHandler<CreateVocabCommand, Guid>
+    public sealed class CreateVocabCommandHandler(IVocabCatalogWriter writer) : IRequestHandler<CreateVocabCommand, Guid>
     {
         public async Task<Guid> Handle(CreateVocabCommand request, CancellationToken cancellationToken)
         {
@@ -18,8 +18,10 @@ namespace JlptTrainer.Application.Vocabs.Commands.CreateVocab
                 Level = request.Level
             };
 
-            dbContext.Vocabs.Add(vocab);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            if (await writer.InsertMissingAsync([vocab], cancellationToken) == 0)
+            {
+                throw new ConflictException("Từ và cách đọc này đã có trong kho từ vựng.");
+            }
 
             return vocab.Id;
         }

@@ -6,5 +6,6 @@ namespace JlptTrainer.Application.Kanjis.Queries.GetKanjiList
     public sealed record GetKanjiListQuery(
         JlptLevel? Level = null,
         int PageNumber = 1,
-        int PageSize = 20) : IRequest<PagedKanjiResult>;
+        int PageSize = 20,
+        string? Search = null) : IRequest<PagedKanjiResult>;
 }

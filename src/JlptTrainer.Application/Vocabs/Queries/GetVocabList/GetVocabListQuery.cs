@@ -6,5 +6,6 @@ namespace JlptTrainer.Application.Vocabs.Queries.GetVocabList
     public sealed record GetVocabListQuery(
         JlptLevel? Level = null,
         int PageNumber = 1,
-        int PageSize = 20) : IRequest<PagedVocabResult>;
+        int PageSize = 20,
+        string? Search = null) : IRequest<PagedVocabResult>;
 }

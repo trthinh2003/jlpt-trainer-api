@@ -1,6 +1,7 @@
 ﻿using JlptTrainer.Application.Kanjis.Commands.CreateKanji;
 using JlptTrainer.Application.Kanjis.Commands.DeleteKanji;
 using JlptTrainer.Application.Kanjis.Commands.ImportKanjiFromExcel;
+using JlptTrainer.Application.Kanjis.Commands.UpdateKanjiContent;
 using JlptTrainer.Application.Kanjis.Queries.GetKanjiById;
 using JlptTrainer.Application.Kanjis.Queries.GetKanjiImportTemplate;
 using JlptTrainer.Application.Kanjis.Queries.GetKanjiList;
@@ -36,6 +37,16 @@ namespace JlptTrainer.Api.Controllers
         {
             var id = await mediator.Send(command, cancellationToken);
             return CreatedAtAction(nameof(GetById), new { id }, id);
+        }
+
+        [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
+        [HttpPut("{id:guid}/content")]
+        public async Task<IActionResult> UpdateContent(Guid id, UpdateKanjiContentRequest request,
+            CancellationToken cancellationToken)
+        {
+            await mediator.Send(new UpdateKanjiContentCommand(id, request.Meaning,
+                request.OnYomi, request.KunYomi), cancellationToken);
+            return NoContent();
         }
 
         [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
@@ -75,5 +86,8 @@ namespace JlptTrainer.Api.Controllers
 
             return Ok(result);
         }
+
+        public sealed record UpdateKanjiContentRequest(string Meaning,
+            string? OnYomi, string? KunYomi);
     }
 }

@@ -4,12 +4,11 @@ using JlptTrainer.Application.Common.Interfaces;
 using JlptTrainer.Application.Vocabs.Commands.CreateVocab;
 using JlptTrainer.Domain.Entities;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace JlptTrainer.Application.Vocabs.ImportVocabFromExcel;
 
 public sealed class ImportVocabFromExcelCommandHandler(
-    IApplicationDbContext dbContext,
+    IVocabCatalogWriter writer,
     IExcelReader excelReader,
     IValidator<CreateVocabCommand> validator) : IRequestHandler<ImportVocabFromExcelCommand, ImportVocabResult>
 {
@@ -17,11 +16,9 @@ public sealed class ImportVocabFromExcelCommandHandler(
     {
         using var stream = new MemoryStream(request.FileContent);
         var rows = excelReader.ReadSheet(stream);
-        var keys = await dbContext.Vocabs.Select(item => new { item.Word, item.Reading }).ToListAsync(cancellationToken);
-        var knownKeys = keys.Select(key => (key.Word, key.Reading)).ToHashSet();
+        var keysInWorkbook = new HashSet<(string Word, string Reading)>();
         var errors = new List<ImportRowError>();
         var imported = new List<Vocab>();
-        var duplicates = 0;
 
         foreach (var row in rows)
         {
@@ -42,9 +39,8 @@ public sealed class ImportVocabFromExcelCommandHandler(
                 continue;
             }
 
-            if (!knownKeys.Add((input.Word, input.Reading)))
+            if (!keysInWorkbook.Add((input.Word, input.Reading)))
             {
-                duplicates++;
                 continue;
             }
 
@@ -59,12 +55,8 @@ public sealed class ImportVocabFromExcelCommandHandler(
             });
         }
 
-        if (imported.Count > 0)
-        {
-            dbContext.Vocabs.AddRange(imported);
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
-
-        return new ImportVocabResult(rows.Count, imported.Count, duplicates, errors);
+        var successCount = await writer.InsertMissingAsync(imported, cancellationToken);
+        var duplicates = rows.Count - errors.Count - successCount;
+        return new ImportVocabResult(rows.Count, successCount, duplicates, errors);
     }
 }

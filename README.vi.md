@@ -45,6 +45,8 @@ Chạy lại `.\scripts\update-database.ps1` khi repo có migration mới. Scrip
 
 Người học đã đăng nhập có thể gọi `POST /api/reviewcards/batch` với `cardType` (0 cho từ vựng, 1 cho Kanji, 2 cho ngữ pháp) và `referenceIds` chứa từ 1 đến 20 ID cùng loại. Phản hồi trả các ID duy nhất theo `addedIds`, `alreadyAddedIds` và `missingIds`. Gửi lại giữ lịch ôn của thẻ đã có. Route `POST /api/reviewcards/kanji/batch` vẫn nhận riêng danh sách ID Kanji qua `referenceIds`.
 
+`GET /api/reviewcards/due` nhận hai bộ lọc tùy chọn `cardType` (0 cho từ vựng, 1 cho Kanji, 2 cho ngữ pháp) và `level` (1 đến 5). API lọc thẻ đến hạn của người đăng nhập trước khi áp dụng `maxCards`, mặc định là 20.
+
 ## Quên mật khẩu qua Gmail
 
 1. Bật xác minh hai bước cho tài khoản Gmail dùng để gửi rồi tạo App Password. [Hướng dẫn của Google](https://support.google.com/mail/answer/185833).
@@ -82,6 +84,26 @@ Sau khi đã duyệt các cặp trùng, sao lưu database và dừng API. Chạy
 ```sql
 UPDATE users SET role = 1 WHERE email = lower('manager@example.com');
 ```
+
+### Ảnh minh họa từ vựng
+
+Chạy `./scripts/update-database.ps1` để áp migration `AddVocabImages`. Cấu hình `Media__S3__Bucket` và `Media__S3__Region` cho API. Dùng IAM role trên máy chủ hoặc đặt `AWS_PROFILE` cho profile local. Bucket private cấp `s3:GetObject`, `s3:PutObject` và `s3:DeleteObject` trên `media/vocab-images/*`. Mỗi môi trường database dùng một bucket riêng. Nếu bucket bật versioning, đặt lifecycle hết hạn cho phiên bản cũ để thu hồi dung lượng.
+
+Quản lý kho dùng `PUT /api/vocabs/{id}/image` với multipart `file` để tải ảnh JPEG, PNG hoặc WebP tối đa 5 MB và 2048 × 2048 px. Dùng `DELETE /api/vocabs/{id}/image` để gỡ ảnh. API từ vựng có trường `hasImage`. Người học đã đăng nhập gọi `GET /api/vocabs/{id}/image` để lấy `{ "url": "..." }` có hạn 5 phút. Khi chưa có ảnh, API trả `204`. Backend mã hóa lại ảnh và dọn file không còn dùng theo lịch.
+
+### Bài học video
+
+Áp migration `AddVideoLessons` để bật kho bài học. API dùng cùng cấu hình S3 với ảnh từ vựng. IAM cần quyền đọc, ghi và xóa object trên `media/video-lessons/*`. Nếu dùng reverse proxy, đặt giới hạn request phù hợp với video 50 MB và phần dữ liệu multipart, đồng thời cấu hình thời gian chờ phù hợp với tốc độ tải lên.
+
+Quản lý kho đăng video MP4 kèm tiêu đề, mô tả và cấp JLPT qua `POST /api/video-lessons` với các trường multipart `title`, `description`, `level`, `file`. Có thể gỡ bài bằng `DELETE /api/video-lessons/{id}`. Người học đăng nhập dùng `GET /api/video-lessons` để duyệt theo `level`, `pageNumber`, `pageSize`, và dùng `GET /api/video-lessons/{id}/playback` để lấy URL phát có hạn 30 phút. Trình duyệt đọc từng phần trực tiếp từ S3 để phát và tua. Ưu tiên MP4 H.264/AAC.
+
+### Học qua audio
+
+Áp migration `AddAudioLessons`. API dùng cấu hình S3 của video và cần quyền đọc, ghi, xóa object trên `media/audio-lessons/*`.
+
+Quản lý chọn file audio, nhập LRC rồi bấm **Xem trước lời** trong Vue để kiểm tra mốc trước khi đăng. `POST /api/audio-lessons/preview-lyrics` nhận JSON chứa chuỗi `lyrics` và trả các dòng `{ startMs, text }` đã sắp xếp. Vue phát file trên máy, còn API chỉ xử lý văn bản.
+
+Quản lý dùng `POST /api/audio-lessons` với multipart `title`, `level`, `audio` (MP3 hoặc WAV tối đa 25 MB), `cover` (JPEG, PNG hoặc WebP tối đa 5 MB và 2048 × 2048 px), `lyrics` (lời LRC có mốc thời gian) và các trường `vocabIds` lặp lại cho 1–20 từ. `DELETE /api/audio-lessons/{id}` gỡ bài nghe. Người học dùng `GET /api/audio-lessons`, `GET /api/audio-lessons/{id}/playback` và `GET /api/audio-lessons/{id}/words`.
 
 ## Kiểm thử
 

@@ -20,7 +20,8 @@ namespace JlptTrainer.Application.Vocabs.Queries.GetVocabById
                     v.Meaning,
                     v.ExampleSentence,
                     v.ExampleSentenceMeaning,
-                    v.Level))
+                    v.Level,
+                    v.Image != null))
                 .FirstOrDefaultAsync(cancellationToken);
 
             return vocab ?? throw new NotFoundException(nameof(Vocab), request.Id);

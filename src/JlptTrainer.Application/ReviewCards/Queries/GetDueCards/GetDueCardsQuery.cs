@@ -3,7 +3,10 @@ using MediatR;
 
 namespace JlptTrainer.Application.ReviewCards.Queries.GetDueCards
 {
-    public sealed record GetDueCardsQuery(int MaxCards = 20) : IRequest<List<DueCardDto>>;
+    public sealed record GetDueCardsQuery(
+        int MaxCards = 20,
+        CardType? CardType = null,
+        JlptLevel? Level = null) : IRequest<List<DueCardDto>>;
 
     public sealed record DueCardDto(
         Guid ReviewCardId,

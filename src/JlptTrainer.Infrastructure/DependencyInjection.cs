@@ -1,9 +1,11 @@
 ﻿using JlptTrainer.Application.Common.Interfaces;
 using JlptTrainer.Application.ReviewCards;
 using JlptTrainer.Application.Vocabs;
+using JlptTrainer.Application.Vocabs.Images;
 using JlptTrainer.Infrastructure.Auth;
 using JlptTrainer.Infrastructure.ExcelImport;
 using JlptTrainer.Infrastructure.ExternalServices.Jisho;
+using JlptTrainer.Infrastructure.Media;
 using JlptTrainer.Infrastructure.PdfExport;
 using JlptTrainer.Infrastructure.Persistence;
 using JlptTrainer.Infrastructure.Services;
@@ -38,6 +40,13 @@ public static class DependencyInjection
         services.AddScoped<IApplicationDbContext>(
             provider => provider.GetRequiredService<ApplicationDbContext>());
         services.AddScoped<IVocabCatalogWriter, VocabCatalogWriter>();
+        services.AddScoped<IVocabImageStore, VocabImageStore>();
+        services.AddOptions<S3MediaSettings>().BindConfiguration("Media:S3")
+            .Validate(settings => string.IsNullOrWhiteSpace(settings.Bucket) || !string.IsNullOrWhiteSpace(settings.Region),
+                "Cần cấu hình AWS Region cho kho ảnh.")
+            .ValidateOnStart();
+        services.AddSingleton<IMediaObjectStorage, S3MediaStorage>();
+        services.AddHostedService<MediaCleanup>();
         services.AddScoped<IReviewCardStore, ReviewCardStore>();
 
         // dùng chung 1 connection string cho cả EF Core (write) và Dapper (read nặng)

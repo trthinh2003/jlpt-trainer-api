@@ -18,9 +18,13 @@ namespace JlptTrainer.Api.Controllers
     {
         // lấy danh sách thẻ tới hạn ôn cho phiên học hiện tại
         [HttpGet("due")]
-        public async Task<ActionResult<List<DueCardDto>>> GetDueCards([FromQuery] int maxCards = 20, CancellationToken cancellationToken = default)
+        public async Task<ActionResult<List<DueCardDto>>> GetDueCards(
+            [FromQuery] int maxCards = 20,
+            [FromQuery] CardType? cardType = null,
+            [FromQuery] JlptLevel? level = null,
+            CancellationToken cancellationToken = default)
         {
-            var result = await mediator.Send(new GetDueCardsQuery(maxCards), cancellationToken);
+            var result = await mediator.Send(new GetDueCardsQuery(maxCards, cardType, level), cancellationToken);
             return Ok(result);
         }
 

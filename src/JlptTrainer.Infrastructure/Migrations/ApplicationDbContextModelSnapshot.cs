@@ -22,6 +22,86 @@ namespace JlptTrainer.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("JlptTrainer.Domain.Entities.AudioLesson", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CleanupAfter")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cleanup_after");
+
+                    b.Property<string>("CoverKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("cover_key");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("integer")
+                        .HasColumnName("level");
+
+                    b.Property<string>("Lyrics")
+                        .IsRequired()
+                        .HasMaxLength(28000)
+                        .HasColumnType("character varying(28000)")
+                        .HasColumnName("lyrics");
+
+                    b.Property<string>("ObjectKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("object_key");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("published_at");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("title");
+
+                    b.HasKey("Id")
+                        .HasName("pk_audio_lessons");
+
+                    b.HasIndex("CleanupAfter")
+                        .HasDatabaseName("ix_audio_lessons_cleanup_after")
+                        .HasFilter("published_at IS NULL");
+
+                    b.HasIndex("PublishedAt", "Id")
+                        .HasDatabaseName("ix_audio_lessons_published_at_id")
+                        .HasFilter("published_at IS NOT NULL");
+
+                    b.ToTable("audio_lessons", (string)null);
+                });
+
+            modelBuilder.Entity("JlptTrainer.Domain.Entities.AudioLessonWord", b =>
+                {
+                    b.Property<Guid>("AudioLessonId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("audio_lesson_id");
+
+                    b.Property<Guid>("VocabId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("vocab_id");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.HasKey("AudioLessonId", "VocabId")
+                        .HasName("pk_audio_lesson_words");
+
+                    b.HasIndex("VocabId")
+                        .HasDatabaseName("ix_audio_lesson_words_vocab_id");
+
+                    b.ToTable("audio_lesson_words", (string)null);
+                });
+
             modelBuilder.Entity("JlptTrainer.Domain.Entities.GrammarPoint", b =>
                 {
                     b.Property<Guid>("Id")
@@ -491,6 +571,56 @@ namespace JlptTrainer.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("JlptTrainer.Domain.Entities.VideoLesson", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CleanupAfter")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cleanup_after");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("description");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("integer")
+                        .HasColumnName("level");
+
+                    b.Property<string>("ObjectKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("object_key");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("published_at");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("title");
+
+                    b.HasKey("Id")
+                        .HasName("pk_video_lessons");
+
+                    b.HasIndex("CleanupAfter")
+                        .HasDatabaseName("ix_video_lessons_cleanup_after")
+                        .HasFilter("published_at IS NULL");
+
+                    b.HasIndex("PublishedAt", "Id")
+                        .HasDatabaseName("ix_video_lessons_published_at_id")
+                        .HasFilter("published_at IS NOT NULL");
+
+                    b.ToTable("video_lessons", (string)null);
+                });
+
             modelBuilder.Entity("JlptTrainer.Domain.Entities.Vocab", b =>
                 {
                     b.Property<Guid>("Id")
@@ -543,6 +673,54 @@ namespace JlptTrainer.Infrastructure.Migrations
                         .HasDatabaseName("ix_vocabs_word_reading");
 
                     b.ToTable("vocabs", (string)null);
+                });
+
+            modelBuilder.Entity("JlptTrainer.Domain.Entities.VocabImage", b =>
+                {
+                    b.Property<string>("ObjectKey")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("object_key");
+
+                    b.Property<DateTimeOffset>("CleanupAfter")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cleanup_after");
+
+                    b.Property<Guid?>("VocabId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("vocab_id");
+
+                    b.HasKey("ObjectKey")
+                        .HasName("pk_vocab_images");
+
+                    b.HasIndex("CleanupAfter")
+                        .HasDatabaseName("ix_vocab_images_cleanup_after")
+                        .HasFilter("vocab_id IS NULL");
+
+                    b.HasIndex("VocabId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_vocab_images_vocab_id");
+
+                    b.ToTable("vocab_images", (string)null);
+                });
+
+            modelBuilder.Entity("JlptTrainer.Domain.Entities.AudioLessonWord", b =>
+                {
+                    b.HasOne("JlptTrainer.Domain.Entities.AudioLesson", null)
+                        .WithMany("Words")
+                        .HasForeignKey("AudioLessonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_audio_lesson_words_audio_lessons_audio_lesson_id");
+
+                    b.HasOne("JlptTrainer.Domain.Entities.Vocab", "Vocab")
+                        .WithMany()
+                        .HasForeignKey("VocabId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_audio_lesson_words_vocabs_vocab_id");
+
+                    b.Navigation("Vocab");
                 });
 
             modelBuilder.Entity("JlptTrainer.Domain.Entities.MockTest", b =>
@@ -611,9 +789,28 @@ namespace JlptTrainer.Infrastructure.Migrations
                         .HasConstraintName("fk_study_sessions_users_user_id");
                 });
 
+            modelBuilder.Entity("JlptTrainer.Domain.Entities.VocabImage", b =>
+                {
+                    b.HasOne("JlptTrainer.Domain.Entities.Vocab", null)
+                        .WithOne("Image")
+                        .HasForeignKey("JlptTrainer.Domain.Entities.VocabImage", "VocabId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_vocab_images_vocabs_vocab_id");
+                });
+
+            modelBuilder.Entity("JlptTrainer.Domain.Entities.AudioLesson", b =>
+                {
+                    b.Navigation("Words");
+                });
+
             modelBuilder.Entity("JlptTrainer.Domain.Entities.MockTestAttempt", b =>
                 {
                     b.Navigation("Questions");
+                });
+
+            modelBuilder.Entity("JlptTrainer.Domain.Entities.Vocab", b =>
+                {
+                    b.Navigation("Image");
                 });
 #pragma warning restore 612, 618
         }

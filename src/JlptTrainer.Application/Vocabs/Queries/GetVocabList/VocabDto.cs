@@ -9,5 +9,6 @@ namespace JlptTrainer.Application.Vocabs.Queries.GetVocabList
         string Meaning,
         string? ExampleSentence,
         string? ExampleSentenceMeaning,
-        JlptLevel Level);
+        JlptLevel Level,
+        bool HasImage = false);
 }

@@ -10,6 +10,8 @@ namespace JlptTrainer.Infrastructure.Persistence
     {
         public DbSet<User> Users => Set<User>();
         public DbSet<Vocab> Vocabs => Set<Vocab>();
+        public DbSet<VideoLesson> VideoLessons => Set<VideoLesson>();
+        public DbSet<AudioLesson> AudioLessons => Set<AudioLesson>();
         public DbSet<Kanji> Kanjis => Set<Kanji>();
         public DbSet<GrammarPoint> GrammarPoints => Set<GrammarPoint>();
         public DbSet<ReviewCard> ReviewCards => Set<ReviewCard>();

@@ -45,6 +45,8 @@ Run `./scripts/update-database.ps1` whenever there are new migrations. The scrip
 
 Signed-in learners can send `POST /api/reviewcards/batch` with `cardType` (0 for vocabulary, 1 for Kanji, 2 for grammar) and `referenceIds`, an array of 1 to 20 IDs from that catalog. The response groups the unique reference IDs into `addedIds`, `alreadyAddedIds`, and `missingIds`. Retrying preserves the schedule of each existing card. `POST /api/reviewcards/kanji/batch` also accepts Kanji IDs with the original `referenceIds` request body.
 
+`GET /api/reviewcards/due` accepts optional `cardType` (0 for vocabulary, 1 for Kanji, 2 for grammar) and `level` (1 to 5). It filters the signed-in learner's due cards before applying `maxCards`, which defaults to 20.
+
 ## Password reset with Gmail
 
 1. Enable 2-Step Verification for the Gmail sender account and create an App Password. [Google's App Password guide](https://support.google.com/mail/answer/185833).
@@ -82,6 +84,26 @@ To grant catalog management to an existing account, run the following SQL as a d
 ```sql
 UPDATE users SET role = 1 WHERE email = lower('manager@example.com');
 ```
+
+### Vocabulary images
+
+Apply `AddVocabImages` with `./scripts/update-database.ps1`. To enable S3, set `Media__S3__Bucket` and `Media__S3__Region` for the API. Use an AWS role on the host or set `AWS_PROFILE` to an authorized local profile. The private bucket grants `s3:GetObject`, `s3:PutObject`, and `s3:DeleteObject` on `media/vocab-images/*`. Use one bucket per database environment. For a versioned bucket, configure expiration of noncurrent versions to reclaim their storage.
+
+Managers upload a multipart `file` with `PUT /api/vocabs/{id}/image` or detach it with `DELETE /api/vocabs/{id}/image`. Uploads accept JPEG, PNG and WebP up to 5 MB and 2048 × 2048 px. Vocabulary responses include `hasImage`. Signed-in learners call `GET /api/vocabs/{id}/image` to get `{ "url": "..." }` valid for five minutes or `204` when there is no image. The API re-encodes uploads and removes unused files in the background.
+
+### Video lessons
+
+Apply `AddVideoLessons` to enable the video catalog. This uses the vocabulary image S3 settings. The API's IAM principal needs object read, write, and delete permissions on `media/video-lessons/*`. If using a reverse proxy, configure the request limit to allow a 50 MB video plus multipart overhead and set timeouts suitable for uploads.
+
+Managers publish an MP4 with multipart `title`, `description`, `level`, and `file` at `POST /api/video-lessons` and remove it with `DELETE /api/video-lessons/{id}`. Signed-in users browse `GET /api/video-lessons` with `level`, `pageNumber`, and `pageSize`. They request a 30-minute playback URL from `GET /api/video-lessons/{id}/playback`. Browsers play and seek directly on S3. H.264/AAC in an MP4 container is recommended.
+
+### Audio lessons
+
+Apply `AddAudioLessons` and grant the API object read, write, and delete permissions on `media/audio-lessons/*`.
+
+To check timing before publishing, managers select a local audio file, enter LRC and click **Xem trước lời** in Vue. `POST /api/audio-lessons/preview-lyrics` accepts JSON with a `lyrics` string and returns sorted `{ startMs, text }` cues. Vue plays the files locally, and the endpoint performs no database writes or S3 uploads.
+
+Managers publish a lesson through multipart `POST /api/audio-lessons` with `title`, `level`, `audio` (MP3 or WAV up to 25 MB), `cover` (JPEG, PNG or WebP up to 5 MB and 2048 × 2048 px), `lyrics` (timed LRC text), and repeated `vocabIds` fields for 1–20 catalog words. They unpublish it with `DELETE /api/audio-lessons/{id}`. Signed-in learners can list lessons and request their playback or vocabulary via the `playback` and `words` endpoints.
 
 ## Tests
 

@@ -7,6 +7,8 @@ namespace JlptTrainer.Application.Common.Interfaces
     {
         DbSet<User> Users { get; }
         DbSet<Vocab> Vocabs { get; }
+        DbSet<VideoLesson> VideoLessons { get; }
+        DbSet<AudioLesson> AudioLessons { get; }
         DbSet<Kanji> Kanjis { get; }
         DbSet<GrammarPoint> GrammarPoints { get; }
         DbSet<ReviewCard> ReviewCards { get; }

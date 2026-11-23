@@ -10,6 +10,7 @@ namespace JlptTrainer.Domain.Entities
         public string Meaning { get; set; } = string.Empty;
         public string? ExampleSentence { get; set; }
         public string? ExampleSentenceMeaning { get; set; }
+        public VocabImage? Image { get; set; }
         public JlptLevel Level { get; set; } = JlptLevel.N5;
     }
 }

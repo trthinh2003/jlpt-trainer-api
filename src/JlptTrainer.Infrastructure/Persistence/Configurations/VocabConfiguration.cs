@@ -12,6 +12,8 @@ namespace JlptTrainer.Infrastructure.Persistence.Configurations
             builder.Property(v => v.Reading).HasMaxLength(100).IsRequired();
             builder.Property(v => v.Meaning).HasMaxLength(500).IsRequired();
             builder.HasIndex(v => new { v.Word, v.Reading }).IsUnique();
+            builder.HasOne(v => v.Image).WithOne().HasForeignKey<VocabImage>(image => image.VocabId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             builder.HasIndex(v => v.Level);  // lọc theo Level rất thường xuyên (màn hình luyện tập lọc theo N5/N4...)
         }

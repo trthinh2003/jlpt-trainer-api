@@ -45,6 +45,8 @@ Swagger は `https://localhost:7017/swagger` で開けます。ブラウザー�
 
 ログインした学習者は `POST /api/reviewcards/batch` で `cardType`（語彙は 0、漢字は 1、文法は 2）と同じ種類の教材 ID を 1〜20 件含む `referenceIds` を送信できます。重複を除いた教材 ID は、新規追加の `addedIds`、登録済みの `alreadyAddedIds`、見つからない `missingIds` に分けて返ります。再送しても既存カードの復習予定は保持されます。`POST /api/reviewcards/kanji/batch` では従来どおり `referenceIds` に漢字 ID を指定できます。
 
+`GET /api/reviewcards/due` では、`cardType`（語彙は 0、漢字は 1、文法は 2）と `level`（1〜5）を任意で指定できます。ログインした学習者の復習期限を迎えたカードを絞り込んでから、既定値が 20 の `maxCards` を適用します。
+
 ## Gmail でパスワードを再設定
 
 1. 送信用 Gmail アカウントで 2 段階認証を有効にし、アプリ パスワードを作成します。[Google の設定ガイド](https://support.google.com/mail/answer/185833)
@@ -82,6 +84,24 @@ Vue では Excel ファイルを選び、プレビューで結果を確認して
 ```sql
 UPDATE users SET role = 1 WHERE email = lower('manager@example.com');
 ```
+
+### 語彙の画像
+
+`./scripts/update-database.ps1` で `AddVocabImages` を適用します。API に `Media__S3__Bucket` と `Media__S3__Region` を設定します。実行環境の IAM ロール、またはローカルの `AWS_PROFILE` を使用します。非公開バケットの `media/vocab-images/*` に `s3:GetObject`、`s3:PutObject`、`s3:DeleteObject` を付与します。DB 環境ごとにバケットを分け、バージョニングを有効にする場合は旧バージョンの有効期限を設定します。
+
+管理者は `PUT /api/vocabs/{id}/image` に multipart の `file` を送信し、`DELETE /api/vocabs/{id}/image` で画像を解除します。JPEG、PNG、WebP の上限は 5 MB、2048 × 2048 px です。語彙 API は `hasImage` を返します。ログイン済みユーザーは `GET /api/vocabs/{id}/image` で有効期限 5 分の URL を取得できます。画像がない場合は `204` です。
+
+### 動画レッスン
+
+`AddVideoLessons` を適用します。語彙画像と同じ S3 設定を使用し、`media/video-lessons/*` にオブジェクトの読み取り・書き込み・削除権限を付与します。リバースプロキシを使用する場合は、50 MB の動画と multipart の付加データを受け取れるように設定します。
+
+管理者は `POST /api/video-lessons` に multipart の `title`、`description`、`level`、`file` を送信し、`DELETE /api/video-lessons/{id}` で公開を取り消せます。ログイン済みユーザーは一覧と `GET /api/video-lessons/{id}/playback` を利用できます。再生 URL の有効期限は 30 分です。H.264/AAC の MP4 を推奨します。
+
+### 音声レッスン
+
+`AddAudioLessons` を適用し、API に `media/audio-lessons/*` の読み取り・書き込み・削除権限を付与します。管理者は音声（MP3 または WAV、最大 25 MB）、画像（JPEG、PNG、WebP、最大 5 MB と 2048 × 2048 px）、タイムスタンプ付き LRC と語彙 1〜20 件を登録します。学習者は再生に合わせて歌詞を読み、再生後に語彙を復習リストへ追加できます。
+
+公開前に音声ファイルを選び、LRC を入力して **Xem trước lời** を押すと同期を確認できます。管理者向けの `POST /api/audio-lessons/preview-lyrics` は JSON の `lyrics` を受け取り、時刻順に並んだ `{ startMs, text }` を返します。ファイルはブラウザーでローカル再生します。
 
 ## テスト
 

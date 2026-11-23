@@ -1,13 +1,14 @@
-﻿using JlptTrainer.Application.Vocabs.Commands.CreateVocab;
+﻿using JlptTrainer.Api.Auth;
+using JlptTrainer.Api.ExcelImport;
+using JlptTrainer.Application.Vocabs.Commands.CreateVocab;
 using JlptTrainer.Application.Vocabs.Commands.DeleteVocab;
 using JlptTrainer.Application.Vocabs.Commands.UpdateVocabContent;
+using JlptTrainer.Application.Vocabs.Images;
 using JlptTrainer.Application.Vocabs.ImportVocabFromExcel;
 using JlptTrainer.Application.Vocabs.Queries.GetVocabById;
 using JlptTrainer.Application.Vocabs.Queries.GetVocabImportTemplate;
 using JlptTrainer.Application.Vocabs.Queries.GetVocabList;
 using JlptTrainer.Application.Vocabs.Queries.LookupWord;
-using JlptTrainer.Api.Auth;
-using JlptTrainer.Api.ExcelImport;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -56,6 +57,33 @@ namespace JlptTrainer.Api.Controllers
             await mediator.Send(new UpdateVocabContentCommand(id, request.Meaning,
                 request.ExampleSentence, request.ExampleSentenceMeaning), cancellationToken);
             return NoContent();
+        }
+
+        [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
+        [HttpPut("{id:guid}/image")]
+        [RequestSizeLimit(UploadVocabImage.MaxSize + 32 * 1024)]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadImage(Guid id, IFormFile file, CancellationToken cancellationToken)
+        {
+            await using var stream = file.OpenReadStream();
+            await mediator.Send(new UploadVocabImage(id, stream, file.Length), cancellationToken);
+            return NoContent();
+        }
+
+        [Authorize(Policy = CatalogAuthorization.ManagePolicy)]
+        [HttpDelete("{id:guid}/image")]
+        public async Task<IActionResult> RemoveImage(Guid id, CancellationToken cancellationToken)
+        {
+            await mediator.Send(new RemoveVocabImage(id), cancellationToken);
+            return NoContent();
+        }
+
+        [HttpGet("{id:guid}/image")]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<ActionResult<VocabImageLink>> GetImage(Guid id, CancellationToken cancellationToken)
+        {
+            var link = await mediator.Send(new GetVocabImage(id), cancellationToken);
+            return link is null ? NoContent() : Ok(link);
         }
 
         [Authorize(Policy = CatalogAuthorization.ManagePolicy)]

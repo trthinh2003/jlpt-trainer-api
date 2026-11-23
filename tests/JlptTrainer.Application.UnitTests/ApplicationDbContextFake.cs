@@ -15,6 +15,8 @@ namespace JlptTrainer.Application.UnitTests
 
         public DbSet<User> Users => Set<User>();
         public DbSet<Vocab> Vocabs => Set<Vocab>();
+        public DbSet<VideoLesson> VideoLessons => Set<VideoLesson>();
+        public DbSet<AudioLesson> AudioLessons => Set<AudioLesson>();
         public DbSet<Kanji> Kanjis => Set<Kanji>();
         public DbSet<GrammarPoint> GrammarPoints => Set<GrammarPoint>();
         public DbSet<ReviewCard> ReviewCards => Set<ReviewCard>();
@@ -25,6 +27,10 @@ namespace JlptTrainer.Application.UnitTests
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<VocabImage>().HasKey(image => image.ObjectKey);
+            modelBuilder.Entity<AudioLessonWord>().HasKey(word => new { word.AudioLessonId, word.VocabId });
+            modelBuilder.Entity<Vocab>().HasOne(vocab => vocab.Image).WithOne()
+                .HasForeignKey<VocabImage>(image => image.VocabId);
             modelBuilder.Entity<MockTestAttemptQuestion>().HasKey(question => new { question.AttemptId, question.Position });
             base.OnModelCreating(modelBuilder);
         }

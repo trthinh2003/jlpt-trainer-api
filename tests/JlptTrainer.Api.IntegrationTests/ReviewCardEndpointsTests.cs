@@ -204,26 +204,78 @@ namespace JlptTrainer.Api.IntegrationTests
             return (await response.Content.ReadFromJsonAsync<ReviewCardAddition>())!;
         }
 
-        private async Task<Guid> SeedContentAsync(CardType cardType, string title)
+        [Fact]
+        public async Task DueCards_CombinesFiltersBeforeTheLimitAndRestrictsOwnerAndDueDate()
         {
-            if (cardType == CardType.Vocab) return await SeedVocabAsync(title, title, "nghĩa kiểm thử");
+            var learner = await _client.AuthenticateAsync();
+            using var otherClient = factory.CreateClient();
+            var otherLearner = await otherClient.AuthenticateAsync();
+            var n5Kanji = await SeedContentAsync(CardType.Kanji, "辺");
+            var n4Kanji = await SeedContentAsync(CardType.Kanji, "短", JlptLevel.N4);
+            var n4Vocab = await SeedContentAsync(CardType.Vocab, "帰る", JlptLevel.N4);
+            var n4Grammar = await SeedContentAsync(CardType.Grammar, "〜ても", JlptLevel.N4);
+            var futureKanji = await SeedContentAsync(CardType.Kanji, "消", JlptLevel.N4);
+            var now = DateTimeOffset.UtcNow;
+            var oldest = SrsCalculator.InitialState(now.AddDays(-3));
+            var past = SrsCalculator.InitialState(now.AddDays(-2));
+            var recentlyDue = SrsCalculator.InitialState(now.AddDays(-1));
+            var future = SrsCalculator.InitialState(now.AddDays(1));
+
+            using var scope = factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.ReviewCards.AddRange(
+                new ReviewCard(learner.UserId, CardType.Kanji, n5Kanji, oldest),
+                new ReviewCard(learner.UserId, CardType.Kanji, n4Kanji, recentlyDue),
+                new ReviewCard(learner.UserId, CardType.Vocab, n4Vocab, past),
+                new ReviewCard(learner.UserId, CardType.Grammar, n4Grammar, recentlyDue),
+                new ReviewCard(learner.UserId, CardType.Kanji, futureKanji, future),
+                new ReviewCard(otherLearner.UserId, CardType.Kanji, n4Kanji, oldest));
+            await db.SaveChangesAsync();
+
+            async Task<List<DueCardDto>> Due(string query) =>
+                (await _client.GetFromJsonAsync<List<DueCardDto>>("/api/reviewcards/due" + query))!;
+
+            Assert.Equal(n5Kanji, Assert.Single(await Due("?maxCards=1")).ReferenceId);
+            Assert.Equal(n4Kanji, Assert.Single(await Due("?cardType=1&level=4&maxCards=1")).ReferenceId);
+            Assert.Equal(n4Vocab, Assert.Single(await Due("?cardType=0")).ReferenceId);
+            Assert.Equal(n4Grammar, Assert.Single(await Due("?cardType=2&level=4")).ReferenceId);
+            Assert.Equal(new[] { n5Kanji, n4Kanji }, (await Due("?cardType=1")).Select(card => card.ReferenceId));
+            var levelMatches = await Due("?level=4");
+            Assert.Equal(n4Vocab, levelMatches[0].ReferenceId);
+            Assert.Equal(new[] { n4Kanji, n4Vocab, n4Grammar }.Order(), levelMatches.Select(card => card.ReferenceId).Order());
+            Assert.Empty(await Due("?cardType=2&level=5"));
+        }
+
+        [Theory]
+        [InlineData("cardType=3")]
+        [InlineData("level=9")]
+        public async Task DueCards_RejectsInvalidFilters(string query)
+        {
+            await _client.AuthenticateAsync();
+            using var response = await _client.GetAsync("/api/reviewcards/due?" + query);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        private async Task<Guid> SeedContentAsync(CardType cardType, string title, JlptLevel level = JlptLevel.N5)
+        {
+            if (cardType == CardType.Vocab) return await SeedVocabAsync(title, title, "nghĩa kiểm thử", level);
 
             using var scope = factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var id = Guid.NewGuid();
             if (cardType == CardType.Kanji)
-                db.Kanjis.Add(new Kanji { Id = id, Character = title, StrokeCount = 5, Meaning = "nghĩa kiểm thử" });
+                db.Kanjis.Add(new Kanji { Id = id, Character = title, StrokeCount = 5, Meaning = "nghĩa kiểm thử", Level = level });
             else
-                db.GrammarPoints.Add(new GrammarPoint { Id = id, Pattern = title, Meaning = "nghĩa kiểm thử" });
+                db.GrammarPoints.Add(new GrammarPoint { Id = id, Pattern = title, Meaning = "nghĩa kiểm thử", Level = level });
             await db.SaveChangesAsync();
             return id;
         }
 
-        private async Task<Guid> SeedVocabAsync(string word, string reading, string meaning)
+        private async Task<Guid> SeedVocabAsync(string word, string reading, string meaning, JlptLevel level = JlptLevel.N5)
         {
             using var scope = factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var vocab = new Vocab { Word = word, Reading = reading, Meaning = meaning, Level = JlptLevel.N5 };
+            var vocab = new Vocab { Word = word, Reading = reading, Meaning = meaning, Level = level };
             db.Vocabs.Add(vocab);
             await db.SaveChangesAsync();
             return vocab.Id;

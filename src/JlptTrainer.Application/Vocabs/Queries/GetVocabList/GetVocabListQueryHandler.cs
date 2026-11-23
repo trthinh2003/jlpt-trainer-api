@@ -42,7 +42,8 @@ namespace JlptTrainer.Application.Vocabs.Queries.GetVocabList
                     v.Meaning,
                     v.ExampleSentence,
                     v.ExampleSentenceMeaning,
-                    v.Level))
+                    v.Level,
+                    v.Image != null))
                 .ToListAsync(cancellationToken);
 
             return new PagedVocabResult(items, totalCount, request.PageNumber, request.PageSize);

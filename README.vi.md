@@ -47,6 +47,8 @@ Người học đã đăng nhập có thể gọi `POST /api/reviewcards/batch` 
 
 `GET /api/reviewcards/due` nhận hai bộ lọc tùy chọn `cardType` (0 cho từ vựng, 1 cho Kanji, 2 cho ngữ pháp) và `level` (1 đến 5). API lọc thẻ đến hạn của người đăng nhập trước khi áp dụng `maxCards`, mặc định là 20.
 
+`GET /api/reviewcards` liệt kê thẻ đã lưu của người đăng nhập, hỗ trợ `cardType`, `level`, `due`, `search`, `pageNumber` và `pageSize`. `DELETE /api/reviewcards/{id}` gỡ thẻ của chủ sở hữu và giữ lịch sử ôn cùng học liệu trong kho.
+
 ## Quên mật khẩu qua Gmail
 
 1. Bật xác minh hai bước cho tài khoản Gmail dùng để gửi rồi tạo App Password. [Hướng dẫn của Google](https://support.google.com/mail/answer/185833).

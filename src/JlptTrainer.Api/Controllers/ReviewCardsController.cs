@@ -1,8 +1,10 @@
 ﻿using JlptTrainer.Application.ReviewCards.Commands.AddToReview;
 using JlptTrainer.Application.ReviewCards;
 using JlptTrainer.Application.ReviewCards.Commands.AddReviewCardsBatch;
+using JlptTrainer.Application.ReviewCards.Commands.RemoveStudyCard;
 using JlptTrainer.Application.ReviewCards.Commands.SubmitReview;
 using JlptTrainer.Application.ReviewCards.Queries.GetDueCards;
+using JlptTrainer.Application.ReviewCards.Queries.ListStudyCards;
 using JlptTrainer.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -16,6 +18,17 @@ namespace JlptTrainer.Api.Controllers
     [Authorize]
     public class ReviewCardsController(ISender mediator) : ControllerBase
     {
+        [HttpGet]
+        public async Task<ActionResult<StudyCardPage>> List([FromQuery] ListStudyCards query, CancellationToken ct) =>
+            Ok(await mediator.Send(query, ct));
+
+        [HttpDelete("{id:guid}")]
+        public async Task<IActionResult> Remove(Guid id, CancellationToken ct)
+        {
+            await mediator.Send(new RemoveStudyCard(id), ct);
+            return NoContent();
+        }
+
         // lấy danh sách thẻ tới hạn ôn cho phiên học hiện tại
         [HttpGet("due")]
         public async Task<ActionResult<List<DueCardDto>>> GetDueCards(

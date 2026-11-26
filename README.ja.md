@@ -47,6 +47,8 @@ Swagger は `https://localhost:7017/swagger` で開けます。ブラウザー�
 
 `GET /api/reviewcards/due` では、`cardType`（語彙は 0、漢字は 1、文法は 2）と `level`（1〜5）を任意で指定できます。ログインした学習者の復習期限を迎えたカードを絞り込んでから、既定値が 20 の `maxCards` を適用します。
 
+`GET /api/reviewcards` でログイン中の学習者が保存したカードを取得できます。`cardType`、`level`、`due`、`search`、`pageNumber`、`pageSize` を指定できます。`DELETE /api/reviewcards/{id}` は自分のカードを削除し、復習履歴と共有教材を保持します。
+
 ## Gmail でパスワードを再設定
 
 1. 送信用 Gmail アカウントで 2 段階認証を有効にし、アプリ パスワードを作成します。[Google の設定ガイド](https://support.google.com/mail/answer/185833)

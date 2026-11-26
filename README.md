@@ -47,6 +47,8 @@ Signed-in learners can send `POST /api/reviewcards/batch` with `cardType` (0 for
 
 `GET /api/reviewcards/due` accepts optional `cardType` (0 for vocabulary, 1 for Kanji, 2 for grammar) and `level` (1 to 5). It filters the signed-in learner's due cards before applying `maxCards`, which defaults to 20.
 
+`GET /api/reviewcards` lists the signed-in learner's saved cards. It accepts `cardType`, `level`, `due`, `search`, `pageNumber` and `pageSize`. `DELETE /api/reviewcards/{id}` removes an owned card and preserves its review history and the shared material.
+
 ## Password reset with Gmail
 
 1. Enable 2-Step Verification for the Gmail sender account and create an App Password. [Google's App Password guide](https://support.google.com/mail/answer/185833).

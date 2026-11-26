@@ -4,6 +4,7 @@ using JlptTrainer.Application.ReviewCards;
 using JlptTrainer.Application.ReviewCards.Commands.AddReviewCardsBatch;
 using JlptTrainer.Application.ReviewCards.Commands.SubmitReview;
 using JlptTrainer.Application.ReviewCards.Queries.GetDueCards;
+using JlptTrainer.Application.ReviewCards.Queries.ListStudyCards;
 using JlptTrainer.Domain.Entities;
 using JlptTrainer.Domain.Enums;
 using JlptTrainer.Infrastructure.Persistence;
@@ -17,7 +18,141 @@ namespace JlptTrainer.Api.IntegrationTests
     public class ReviewCardEndpointsTests(CustomWebApplicationFactory factory) : IClassFixture<CustomWebApplicationFactory>
     {
         private readonly HttpClient _client = factory.CreateClient();
+        private const string ReviewCardsPath = "/api/reviewcards";
         private const string BatchPath = "/api/reviewcards/batch";
+
+        [Fact]
+        public async Task StudyCards_ListsTheOwnersCurrentContentAndCombinesFiltersBeforePaging()
+        {
+            var learner = await _client.AuthenticateAsync();
+            using var other = factory.CreateClient();
+            var otherLearner = await other.AuthenticateAsync();
+            var vocab = await SeedVocabAsync("乗り物", "のりもの", "Phương tiện", JlptLevel.N4);
+            var kanji = await SeedContentAsync(CardType.Kanji, "乗", JlptLevel.N4);
+            var grammar = await SeedContentAsync(CardType.Grammar, "〜そうです");
+            var now = DateTimeOffset.UtcNow;
+            var oldest = SrsCalculator.InitialState(now.AddDays(-2));
+            var due = SrsCalculator.InitialState(now.AddDays(-1));
+            var future = SrsCalculator.InitialState(now.AddDays(1));
+            using var scope = factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var vocabCard = new ReviewCard(learner.UserId, CardType.Vocab, vocab, oldest);
+            var kanjiCard = new ReviewCard(learner.UserId, CardType.Kanji, kanji, due);
+            var grammarCard = new ReviewCard(learner.UserId, CardType.Grammar, grammar, future);
+            db.ReviewCards.AddRange(vocabCard, kanjiCard, grammarCard,
+                new ReviewCard(otherLearner.UserId, CardType.Kanji, kanji, oldest));
+            await db.SaveChangesAsync();
+
+            async Task<StudyCardPage> List(string query = "") =>
+                (await _client.GetFromJsonAsync<StudyCardPage>(ReviewCardsPath + query))!;
+
+            var all = await List();
+            Assert.Equal(3, all.TotalCount);
+            Assert.Equal(new[] { vocabCard.Id, kanjiCard.Id, grammarCard.Id }, all.Items.Select(c => c.Id));
+            Assert.Equal(new[] { true, true, false }, all.Items.Select(c => c.IsDue));
+            Assert.Equal(1, all.TotalPages);
+            var second = await List("?pageNumber=2&pageSize=1&level=4&due=true");
+            Assert.Equal(2, second.TotalCount);
+            Assert.Equal(2, second.TotalPages);
+            Assert.Equal(kanjiCard.Id, Assert.Single(second.Items).Id);
+            var match = Assert.Single((await List("?cardType=0&search=" + Uri.EscapeDataString(" のりもの "))).Items);
+            Assert.Equal(vocabCard.Id, match.Id);
+            Assert.Equal("Phương tiện", match.Meaning);
+            Assert.Equal(vocabCard.Id, Assert.Single((await List("?search=" + Uri.EscapeDataString("PHƯƠNG"))).Items).Id);
+            Assert.Equal(grammarCard.Id, Assert.Single((await List("?due=false")).Items).Id);
+            Assert.Empty((await List("?pageNumber=2147483647&pageSize=100")).Items);
+            Assert.Empty((await List("?search=%25")).Items);
+        }
+
+        [Fact]
+        public async Task StudyCards_RemovalIsPrivateAndKeepsCatalogHistoryAndOtherLearnersCards()
+        {
+            await _client.AuthenticateAsync();
+            using var other = factory.CreateClient();
+            await other.AuthenticateAsync();
+            using var guest = factory.CreateClient();
+            var vocab = await SeedVocabAsync("忘れる", "わすれる", "quên");
+            var ownerCard = await AddCardAsync(_client, vocab);
+            var otherCard = await AddCardAsync(other, vocab);
+            var submission = new { Grade = ReviewGrade.Good, RequestId = Guid.NewGuid() };
+            var reviewPath = $"{ReviewCardsPath}/{ownerCard}/review";
+            using var review = await _client.PostAsJsonAsync(reviewPath, submission);
+            review.EnsureSuccessStatusCode();
+            var scheduled = await review.Content.ReadFromJsonAsync<SubmitReviewResult>();
+            var afterReview = await _client.GetFromJsonAsync<StudyCardPage>(ReviewCardsPath);
+            var reviewedCard = Assert.Single(afterReview!.Items);
+            Assert.NotNull(reviewedCard.LastReviewedAt);
+            Assert.False(reviewedCard.IsDue);
+            Assert.Equal(scheduled!.NextReviewDate, reviewedCard.NextReviewDate);
+
+            using var denied = await other.DeleteAsync($"{ReviewCardsPath}/{ownerCard}");
+            using var missing = await other.DeleteAsync($"{ReviewCardsPath}/{Guid.NewGuid()}");
+            using var unauthenticated = await guest.DeleteAsync($"{ReviewCardsPath}/{ownerCard}");
+            using var privateList = await guest.GetAsync(ReviewCardsPath);
+            Assert.Equal(HttpStatusCode.NotFound, denied.StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, unauthenticated.StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, privateList.StatusCode);
+
+            using var removed = await _client.DeleteAsync($"{ReviewCardsPath}/{ownerCard}");
+            using var repeated = await _client.DeleteAsync($"{ReviewCardsPath}/{ownerCard}");
+            Assert.Equal(HttpStatusCode.NoContent, removed.StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, repeated.StatusCode);
+            Assert.Empty((await _client.GetFromJsonAsync<StudyCardPage>(ReviewCardsPath))!.Items);
+            Assert.Equal(otherCard, Assert.Single((await other.GetFromJsonAsync<StudyCardPage>(ReviewCardsPath))!.Items).Id);
+            using var replay = await _client.PostAsJsonAsync(reviewPath, submission);
+            replay.EnsureSuccessStatusCode();
+            Assert.Equal(scheduled, await replay.Content.ReadFromJsonAsync<SubmitReviewResult>());
+            using var stale = await _client.PostAsJsonAsync(reviewPath, new { Grade = ReviewGrade.Good });
+            Assert.Equal(HttpStatusCode.NotFound, stale.StatusCode);
+
+            using var scope = factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            Assert.True(await db.Vocabs.AnyAsync(v => v.Id == vocab));
+            Assert.Equal(1, await db.ReviewEvents.CountAsync(e => e.ReviewCardId == ownerCard));
+            Assert.NotEqual(ownerCard, await AddCardAsync(_client, vocab));
+            Assert.True(Assert.Single((await _client.GetFromJsonAsync<StudyCardPage>(ReviewCardsPath))!.Items).IsDue);
+        }
+
+        [Fact]
+        public async Task StudyCards_RemovalAndReviewCanRaceWithoutLeavingAPartialReview()
+        {
+            await _client.AuthenticateAsync();
+            var vocab = await SeedVocabAsync("重ねる", "かさねる", "xếp chồng");
+            var card = await AddCardAsync(_client, vocab);
+            var reviewing = _client.PostAsJsonAsync($"{ReviewCardsPath}/{card}/review", new { Grade = ReviewGrade.Good });
+            var removing = _client.DeleteAsync($"{ReviewCardsPath}/{card}");
+            await Task.WhenAll(reviewing, removing);
+            using var review = await reviewing;
+            using var removed = await removing;
+            Assert.Equal(HttpStatusCode.NoContent, removed.StatusCode);
+            Assert.Contains(review.StatusCode, new[] { HttpStatusCode.OK, HttpStatusCode.NotFound });
+
+            using var scope = factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            Assert.False(await db.ReviewCards.AnyAsync(c => c.Id == card));
+            Assert.Equal(review.IsSuccessStatusCode ? 1 : 0, await db.ReviewEvents.CountAsync(e => e.ReviewCardId == card));
+        }
+
+        [Theory]
+        [InlineData("pageNumber=0")]
+        [InlineData("pageSize=101")]
+        [InlineData("cardType=9")]
+        [InlineData("level=0")]
+        [InlineData("due=unknown")]
+        public async Task StudyCards_RejectsInvalidListFilters(string filter)
+        {
+            await _client.AuthenticateAsync();
+            using var response = await _client.GetAsync($"{ReviewCardsPath}?{filter}");
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        private static async Task<Guid> AddCardAsync(HttpClient client, Guid vocab)
+        {
+            using var response = await client.PostAsJsonAsync(ReviewCardsPath, new AddToReviewCommand(CardType.Vocab, vocab));
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<Guid>();
+        }
 
         [Fact]
         public async Task FullSrsFlow_CreateVocab_AddToReview_ShowsInDue_ThenSubmitReview()

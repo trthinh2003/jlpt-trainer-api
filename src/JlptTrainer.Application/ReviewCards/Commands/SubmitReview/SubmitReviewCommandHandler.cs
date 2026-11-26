@@ -54,6 +54,10 @@ namespace JlptTrainer.Application.ReviewCards.Commands.SubmitReview
                 if (completed is not null) return completed;
                 if (exception is DbUpdateConcurrencyException)
                 {
+                    if (!await dbContext.ReviewCards.AnyAsync(c => c.Id == request.ReviewCardId && c.UserId == userId, cancellationToken))
+                    {
+                        throw new NotFoundException(nameof(ReviewCard), request.ReviewCardId);
+                    }
                     throw new ConflictException("Thẻ vừa thay đổi. Vui lòng tải lại danh sách ôn tập.");
                 }
                 throw;

@@ -3,9 +3,7 @@ using FluentValidation.Results;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace JlptTrainer.Application.AudioLessons;
-
-public sealed record LyricLine(int StartMs, string Text);
+namespace JlptTrainer.Application.AudioLessons.Lyrics;
 
 internal static partial class LrcLyrics
 {

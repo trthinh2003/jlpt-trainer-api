@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 using FluentValidation;
 using FluentValidation.Results;
 
-namespace JlptTrainer.Application.AudioLessons;
+namespace JlptTrainer.Application.AudioLessons.Commands.PublishAudioLesson;
 
 internal static class AudioFile
 {

@@ -30,12 +30,14 @@ public static class DependencyInjection
                 "Thiếu connection string 'DefaultConnection'.")
             .ValidateOnStart();
 
+        services.AddSingleton<AudioLessonPublicationConflictInterceptor>();
         services.AddDbContext<ApplicationDbContext>((provider, options) =>
             options
                 .UseNpgsql(GetConnectionString(provider), npgsqlOptions =>
                     npgsqlOptions.MigrationsAssembly(
                         typeof(ApplicationDbContext).Assembly.FullName))
-                .UseSnakeCaseNamingConvention());
+                .UseSnakeCaseNamingConvention()
+                .AddInterceptors(provider.GetRequiredService<AudioLessonPublicationConflictInterceptor>()));
 
         services.AddScoped<IApplicationDbContext>(
             provider => provider.GetRequiredService<ApplicationDbContext>());
@@ -46,6 +48,7 @@ public static class DependencyInjection
                 "Cần cấu hình AWS Region cho kho ảnh.")
             .ValidateOnStart();
         services.AddSingleton<IMediaObjectStorage, S3MediaStorage>();
+        services.AddSingleton<IMediaImageNormalizer, WebpImageNormalizer>();
         services.AddHostedService<MediaCleanup>();
         services.AddScoped<IReviewCardStore, ReviewCardStore>();
 

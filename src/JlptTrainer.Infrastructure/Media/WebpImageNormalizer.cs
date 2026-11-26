@@ -1,12 +1,13 @@
 using FluentValidation;
 using FluentValidation.Results;
+using JlptTrainer.Application.Common.Interfaces;
 using SkiaSharp;
 
-namespace JlptTrainer.Application.Common.Media;
+namespace JlptTrainer.Infrastructure.Media;
 
-internal static class ImageFile
+public sealed class WebpImageNormalizer : IMediaImageNormalizer
 {
-    public static MemoryStream Normalize(Stream source)
+    public Stream NormalizeToWebp(Stream source)
     {
         using var input = new SKManagedStream(source, disposeManagedStream: false);
         using var codec = SKCodec.Create(input);

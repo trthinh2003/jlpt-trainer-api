@@ -1,7 +1,6 @@
 using FluentValidation;
 using JlptTrainer.Application.Common.Exceptions;
 using JlptTrainer.Application.Common.Interfaces;
-using JlptTrainer.Application.Common.Media;
 using JlptTrainer.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +24,8 @@ public sealed record GetVocabImage(Guid Id) : IRequest<VocabImageLink?>;
 public sealed record VocabImageLink(string Url);
 
 public sealed class VocabImageHandlers(
-    IApplicationDbContext db, IVocabImageStore images, IMediaObjectStorage storage, TimeProvider clock)
+    IApplicationDbContext db, IVocabImageStore images, IMediaObjectStorage storage,
+    IMediaImageNormalizer imageNormalizer, TimeProvider clock)
     : IRequestHandler<UploadVocabImage>, IRequestHandler<RemoveVocabImage>, IRequestHandler<GetVocabImage, VocabImageLink?>
 {
     private static readonly TimeSpan readLifetime = TimeSpan.FromMinutes(5);
@@ -36,7 +36,7 @@ public sealed class VocabImageHandlers(
         if (!await db.Vocabs.AnyAsync(vocab => vocab.Id == request.Id, ct))
             throw new NotFoundException(nameof(Vocab), request.Id);
 
-        using var normalized = ImageFile.Normalize(request.File);
+        using var normalized = imageNormalizer.NormalizeToWebp(request.File);
         var key = $"media/vocab-images/{request.Id:N}/{Guid.NewGuid():N}.webp";
         await images.StageAsync(key, clock.GetUtcNow().AddHours(1), ct);
         await storage.UploadAsync(key, normalized, "image/webp", ct);

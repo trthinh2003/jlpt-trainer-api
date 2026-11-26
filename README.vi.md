@@ -101,7 +101,7 @@ Quản lý kho đăng video MP4 kèm tiêu đề, mô tả và cấp JLPT qua `P
 
 Áp migration `AddAudioLessons`. API dùng cấu hình S3 của video và cần quyền đọc, ghi, xóa object trên `media/audio-lessons/*`.
 
-Quản lý chọn file audio, nhập LRC rồi bấm **Xem trước lời** trong Vue để kiểm tra mốc trước khi đăng. `POST /api/audio-lessons/preview-lyrics` nhận JSON chứa chuỗi `lyrics` và trả các dòng `{ startMs, text }` đã sắp xếp. Vue phát file trên máy, còn API chỉ xử lý văn bản.
+Quản lý chọn file audio, nhập LRC rồi bấm **Xem trước lời** trong Vue để kiểm tra mốc trước khi đăng. Bôi đen chữ trong dòng Nhật và dùng **Gắn vào lời** để liên kết với mục từ đã chọn. `POST /api/audio-lessons/preview-lyrics` nhận JSON chứa `lyrics` và `vocabIds` tùy chọn. Bản xem trước và bài đã đăng trả `startMs`, `text` và `links` nếu có. Mỗi liên kết chứa vị trí và độ dài theo UTF-16, cùng từ, cách đọc và nghĩa. Khi từ bị xóa đồng thời với xuất bản, API trả `409` để quản lý chọn lại.
 
 Quản lý dùng `POST /api/audio-lessons` với multipart `title`, `level`, `audio` (MP3 hoặc WAV tối đa 25 MB), `cover` (JPEG, PNG hoặc WebP tối đa 5 MB và 2048 × 2048 px), `lyrics` (lời LRC có mốc thời gian) và các trường `vocabIds` lặp lại cho 1–20 từ. `DELETE /api/audio-lessons/{id}` gỡ bài nghe. Người học dùng `GET /api/audio-lessons`, `GET /api/audio-lessons/{id}/playback` và `GET /api/audio-lessons/{id}/words`.
 

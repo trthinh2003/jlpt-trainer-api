@@ -20,10 +20,13 @@ public sealed class AudioLessonConfiguration : IEntityTypeConfiguration<AudioLes
 
 public sealed class AudioLessonWordConfiguration : IEntityTypeConfiguration<AudioLessonWord>
 {
+    internal const string VocabForeignKeyName = "fk_audio_lesson_words_vocabs_vocab_id";
+
     public void Configure(EntityTypeBuilder<AudioLessonWord> builder)
     {
         builder.ToTable("audio_lesson_words");
         builder.HasKey(word => new { word.AudioLessonId, word.VocabId });
-        builder.HasOne(word => word.Vocab).WithMany().HasForeignKey(word => word.VocabId);
+        builder.HasOne(word => word.Vocab).WithMany().HasForeignKey(word => word.VocabId)
+            .HasConstraintName(VocabForeignKeyName);
     }
 }

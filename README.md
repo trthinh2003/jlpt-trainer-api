@@ -101,7 +101,7 @@ Managers publish an MP4 with multipart `title`, `description`, `level`, and `fil
 
 Apply `AddAudioLessons` and grant the API object read, write, and delete permissions on `media/audio-lessons/*`.
 
-To check timing before publishing, managers select a local audio file, enter LRC and click **Xem trước lời** in Vue. `POST /api/audio-lessons/preview-lyrics` accepts JSON with a `lyrics` string and returns sorted `{ startMs, text }` cues. Vue plays the files locally, and the endpoint performs no database writes or S3 uploads.
+To check timing before publishing, managers select a local audio file, enter LRC and click **Xem trước lời** in Vue. They can select Japanese text in a lyric line and use **Gắn vào lời** to link it to a selected catalog word. `POST /api/audio-lessons/preview-lyrics` accepts JSON with `lyrics` and optional `vocabIds`. Both preview and playback return sorted cues with plain `text`, `startMs` and nullable `links`. Each link carries `start` and `length` in UTF-16 code units plus the catalog `word` with its reading and meaning. Preview plays local files. A concurrent vocabulary deletion during publish returns `409` so the manager can choose the words again.
 
 Managers publish a lesson through multipart `POST /api/audio-lessons` with `title`, `level`, `audio` (MP3 or WAV up to 25 MB), `cover` (JPEG, PNG or WebP up to 5 MB and 2048 × 2048 px), `lyrics` (timed LRC text), and repeated `vocabIds` fields for 1–20 catalog words. They unpublish it with `DELETE /api/audio-lessons/{id}`. Signed-in learners can list lessons and request their playback or vocabulary via the `playback` and `words` endpoints.
 

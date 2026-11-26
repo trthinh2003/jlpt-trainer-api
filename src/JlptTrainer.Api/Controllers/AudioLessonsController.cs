@@ -1,5 +1,12 @@
 using JlptTrainer.Api.Auth;
 using JlptTrainer.Application.AudioLessons;
+using JlptTrainer.Application.AudioLessons.Commands.PublishAudioLesson;
+using JlptTrainer.Application.AudioLessons.Commands.UnpublishAudioLesson;
+using JlptTrainer.Application.AudioLessons.Lyrics;
+using JlptTrainer.Application.AudioLessons.Queries.GetAudioLessonPlayback;
+using JlptTrainer.Application.AudioLessons.Queries.GetAudioLessonWords;
+using JlptTrainer.Application.AudioLessons.Queries.ListAudioLessons;
+using JlptTrainer.Application.AudioLessons.Queries.PreviewAudioLyrics;
 using JlptTrainer.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -21,7 +28,7 @@ public sealed class AudioLessonsController(ISender mediator) : ControllerBase
     [HttpGet("{id:guid}/playback")]
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public async Task<ActionResult<AudioLessonPlayback>> Playback(Guid id, CancellationToken ct) =>
-        Ok(await mediator.Send(new GetAudioLesson(id), ct));
+        Ok(await mediator.Send(new GetAudioLessonPlayback(id), ct));
 
     [HttpGet("{id:guid}/words")]
     public async Task<ActionResult<IReadOnlyList<AudioLessonVocab>>> Words(Guid id, CancellationToken ct) =>

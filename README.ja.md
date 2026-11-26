@@ -101,7 +101,7 @@ UPDATE users SET role = 1 WHERE email = lower('manager@example.com');
 
 `AddAudioLessons` を適用し、API に `media/audio-lessons/*` の読み取り・書き込み・削除権限を付与します。管理者は音声（MP3 または WAV、最大 25 MB）、画像（JPEG、PNG、WebP、最大 5 MB と 2048 × 2048 px）、タイムスタンプ付き LRC と語彙 1〜20 件を登録します。学習者は再生に合わせて歌詞を読み、再生後に語彙を復習リストへ追加できます。
 
-公開前に音声ファイルを選び、LRC を入力して **Xem trước lời** を押すと同期を確認できます。管理者向けの `POST /api/audio-lessons/preview-lyrics` は JSON の `lyrics` を受け取り、時刻順に並んだ `{ startMs, text }` を返します。ファイルはブラウザーでローカル再生します。
+公開前に音声ファイルを選び、LRC を入力して **Xem trước lời** を押すと同期を確認できます。日本語の歌詞を範囲選択して **Gắn vào lời** を押すと、選択済みの語彙を関連付けられます。`POST /api/audio-lessons/preview-lyrics` は JSON の `lyrics` と任意の `vocabIds` を受け取ります。プレビューと公開済みレッスンの再生データには `startMs`、`text`、語彙リンクがある場合は `links` が含まれます。公開中に語彙が同時に削除された場合、API は `409` を返します。
 
 ## テスト
 
